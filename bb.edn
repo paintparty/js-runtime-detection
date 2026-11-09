@@ -1,0 +1,15 @@
+{:tasks
+ {test:node {:doc  "Run the test suite on Node under nbb. Requires Node.js and npx (fetches nbb on first run)."
+             :task (shell "npx" "--yes" "nbb" "-cp" "src:test" "test/js_runtime_detection/runner.cljs")}
+
+  ci        {:doc     "Run the tests and build the JAR."
+             :depends [test:node]
+             :task    (clojure "-T:build" "jar")}
+
+  install   {:doc     "Install the JAR locally (build via ci)."
+             :depends [ci]
+             :task    (clojure "-T:build" "install")}
+
+  ci:deploy {:doc     "Run the CI pipeline and deploy the JAR to Clojars."
+             :depends [ci]
+             :task    (clojure "-T:build" "deploy")}}}

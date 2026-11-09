@@ -1,0 +1,114 @@
+# js-runtime-detection
+
+Tells ClojureScript code which JavaScript runtime and deployment platform it is running in: Node, Deno, Bun, a browser, a web or service worker, Electron, React Native, Cloudflare Workers, Vercel Edge, Netlify Edge or Fastly Compute.
+
+Detection works by reading properties of `globalThis`. The namespace imports no Node modules, so it loads in any JS environment. Every value is computed once, when the namespace loads.
+
+The namespace is `.cljc`, so you can require it from shared code, but the defs only exist on the ClojureScript side.
+
+## Install
+
+deps.edn:
+
+```clojure
+io.github.paintparty/js-runtime-detection {:mvn/version "0.1.0"}
+```
+
+Leiningen:
+
+```clojure
+[io.github.paintparty/js-runtime-detection "0.1.0"]
+```
+
+## Usage
+
+```clojure
+(ns my.app
+  (:require [js-runtime-detection.core :as rt]))
+
+rt/js-runtime          ;; => :node
+rt/js-server-runtime?  ;; => true
+```
+
+From a `.cljc` file, require it for the ClojureScript side only:
+
+```clojure
+(ns my.app
+  (:require #?(:cljs [js-runtime-detection.core :as rt])))
+
+(def server? #?(:clj true :cljs rt/js-server-runtime?))
+```
+
+## Public defs
+
+| def                          | Value          | Answers                                             |
+|:-----------------------------|:---------------|:----------------------------------------------------|
+| `js-runtime`                 | keyword        | Which runtime (Node, Deno, Bun, workerd, browser)   |
+| `js-platform`                | keyword or nil | Which deployment platform (Cloudflare, Vercel ...)  |
+| `js-server-runtime?`         | boolean        | Is this server-side?                                |
+| `js-runtime-has-dom?`        | boolean        | Are `window` and `document` present?                |
+| `js-runtime-has-jsdom?`      | boolean        | Is jsdom active?                                    |
+| `js-runtime-has-node-apis?`  | boolean        | Can I use `fs`, `process.env` and other Node APIs?  |
+| `js-runtime-is-strict-node?` | boolean        | Is this actual Node, not Bun or Deno in Node mode?  |
+
+`js-runtime` is one of `:node`, `:deno`, `:bun`, `:workerd`, `:browser`, `:service-worker`, `:web-worker`, `:electron-renderer`, `:react-native` or `:unknown`.
+
+`js-platform` is one of `:cloudflare`, `:vercel-edge`, `:netlify-edge`, `:fastly` or `nil`.
+
+## Detection matrix
+
+| Environment        | `js-runtime`         | `js-platform`   |
+|:-------------------|:---------------------|:----------------|
+| Real browser       | `:browser`           | `nil`           |
+| Node               | `:node`              | `nil`           |
+| jsdom in Node      | `:node`              | `nil`           |
+| Deno 2             | `:deno`              | `nil`           |
+| jsdom in Deno      | `:deno`              | `nil`           |
+| Bun                | `:bun`               | `nil`           |
+| jsdom in Bun       | `:bun`               | `nil`           |
+| Cloudflare Workers | `:workerd`           | `:cloudflare`   |
+| Vercel Edge        | `:workerd`           | `:vercel-edge`  |
+| Netlify Edge       | `:deno`              | `:netlify-edge` |
+| Fastly Compute     | `:unknown`           | `:fastly`       |
+| Electron renderer  | `:electron-renderer` | `nil`           |
+| Electron main      | `:node`              | `nil`           |
+| React Native       | `:react-native`      | `nil`           |
+| Service Worker     | `:service-worker`    | `nil`           |
+| Web Worker         | `:web-worker`        | `nil`           |
+
+| Environment        | `js-server-runtime?` | `has-dom?` | `has-jsdom?` | `has-node-apis?` | `is-strict-node?` |
+|:-------------------|:--------------------:|:----------:|:------------:|:----------------:|:-----------------:|
+| Real browser       | false                | true       | false        | false            | false             |
+| Node               | true                 | false      | false        | true             | true              |
+| jsdom in Node      | true                 | true       | true         | true             | true              |
+| Deno 2             | true                 | false      | false        | true             | false             |
+| jsdom in Deno      | true                 | true       | true         | true             | false             |
+| Bun                | true                 | false      | false        | true             | false             |
+| jsdom in Bun       | true                 | true       | true         | true             | false             |
+| Cloudflare Workers | true                 | false      | false        | false            | false             |
+| Vercel Edge        | true                 | false      | false        | false            | false             |
+| Netlify Edge       | true                 | false      | false        | false            | false             |
+| Fastly Compute     | true                 | false      | false        | false            | false             |
+| Electron renderer  | true                 | true       | false        | true             | false             |
+| Electron main      | true                 | false      | false        | true             | true              |
+| React Native       | false                | false      | false        | false            | false             |
+| Service Worker     | false                | false      | false        | false            | false             |
+| Web Worker         | false                | false      | false        | false            | false             |
+
+The `has-*` and `is-*` columns are short for `js-runtime-has-dom?`, `js-runtime-has-jsdom?`, `js-runtime-has-node-apis?` and `js-runtime-is-strict-node?`.
+
+Under jsdom, `js-server-runtime?` and `js-runtime-has-node-apis?` are true, because jsdom runs on a server runtime. Pair them with `(not js-runtime-has-dom?)` to exclude test environments that simulate a browser.
+
+## Development
+
+```sh
+bb test:node   # run the tests on Node (via nbb)
+bb ci          # run the tests and build the jar
+bb install     # install the jar to ~/.m2
+```
+
+## License
+
+Copyright © 2026 Jeremiah Coyle
+
+Distributed under the Eclipse Public License version 2.0.
