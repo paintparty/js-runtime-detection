@@ -1,19 +1,26 @@
 {:tasks
- {test:node     {:doc  "Run the test suite on Node under nbb. Requires Node.js and npx (fetches nbb on first run)."
+ {:init         (defn run-advanced
+                  "Compiles the tests with :advanced using the ClojureScript
+                   from `alias`, then runs them on Node, plain and with jsdom
+                   globals stubbed in."
+                  [alias out-dir]
+                  (let [test-js (str out-dir "/test.js")]
+                    (clojure (str "-M:" alias) "script/build_advanced.clj" out-dir)
+                    (shell "node" test-js)
+                    (shell {:extra-env {"JRD_ENV" "jsdom-node"}}
+                           "node" "-r" "./test/stubs/jsdom.cjs" test-js)))
+
+  test:node     {:doc  "Run the test suite on Node under nbb. Requires Node.js and npx (fetches nbb on first run)."
                  :task (shell "npx" "--yes" "nbb" "-cp" "src:test" "test/js_runtime_detection/runner.cljs")}
 
-  test:advanced {:doc  "Compile the test suite with :advanced optimizations and run it on Node, then again with jsdom globals stubbed in. Catches property renaming that dev builds don't show."
-                 :task (do (clojure "-M:cljs-advanced" "-m" "cljs.main"
-                                    "-co" "{:checked-arrays :warn}"
-                                    "-t" "node" "-O" "advanced"
-                                    "-d" "target/cljs-advanced" "-o" "target/cljs-advanced/test.js"
-                                    "-c" "js-runtime-detection.runner")
-                           (shell "node" "target/cljs-advanced/test.js")
-                           (shell {:extra-env {"JRD_ENV" "jsdom-node"}}
-                                  "node" "-r" "./test/stubs/jsdom.cjs" "target/cljs-advanced/test.js"))}
+  test:advanced {:doc  "Compile the tests with :advanced on the latest ClojureScript and run them on Node, plain and with jsdom globals. Catches property renaming that dev builds don't show."
+                 :task (run-advanced "cljs-latest" "target/cljs-latest")}
 
-  test          {:doc     "Run test:node and test:advanced."
-                 :depends [test:node test:advanced]}
+  test:compat   {:doc  "Compile the tests with :advanced on the oldest supported ClojureScript (1.9.946) and run them on Node, plain and with jsdom globals."
+                 :task (run-advanced "cljs-1.9" "target/cljs-1.9")}
+
+  test          {:doc     "Run test:node, test:advanced and test:compat."
+                 :depends [test:node test:advanced test:compat]}
 
   ci            {:doc     "Run the tests and build the JAR."
                  :depends [test]

@@ -1,9 +1,15 @@
 {:paths ["src"]
  :deps  {org.clojure/clojure {:mvn/version "1.12.5"}}
  :aliases
- {;; Standard ClojureScript compiler, used by `bb test:advanced`
-  :cljs-advanced {:extra-paths ["test"]
-                  :extra-deps  {org.clojure/clojurescript {:mvn/version "1.12.145"}}}
-  :build         {:deps       {io.github.clojure/tools.build {:mvn/version "0.10.14"}
-                               slipset/deps-deploy           {:mvn/version "0.2.5"}}
-                  :ns-default build}}}
+ {;; Latest ClojureScript, used by `bb test:advanced`
+  :cljs-latest {:extra-paths ["test"]
+                :extra-deps  {org.clojure/clojurescript {:mvn/version "1.12.145"}}}
+  ;; Oldest supported ClojureScript, used by `bb test:compat`. This compiler
+  ;; needs Clojure 1.9 and, on Java 11+, the jaxb-api jar.
+  :cljs-1.9    {:extra-paths   ["test"]
+                :extra-deps    {org.clojure/clojurescript {:mvn/version "1.9.946"}
+                                javax.xml.bind/jaxb-api   {:mvn/version "2.3.1"}}
+                :override-deps {org.clojure/clojure {:mvn/version "1.9.0"}}}
+  :build       {:deps       {io.github.clojure/tools.build {:mvn/version "0.10.14"}
+                             slipset/deps-deploy           {:mvn/version "0.2.5"}}
+                :ns-default build}}}

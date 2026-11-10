@@ -116,8 +116,9 @@ Automated tests cover Node and jsdom in Node, in both dev and `:advanced` builds
 
 ```sh
 bb test:node      # run the tests on Node (via nbb)
-bb test:advanced  # compile the tests with :advanced and run them on Node, plain and with jsdom globals
-bb test           # both of the above
+bb test:advanced  # compile the tests with :advanced on the latest ClojureScript, run on Node plain and with jsdom globals
+bb test:compat    # same, on the oldest supported ClojureScript (1.9.946)
+bb test           # all three of the above
 bb ci             # run the tests and build the jar
 bb install        # install the jar to ~/.m2
 ```
