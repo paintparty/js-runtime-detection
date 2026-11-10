@@ -20,8 +20,12 @@
                  :js-runtime-has-node-apis?  true
                  :js-runtime-is-strict-node? true}})
 
+;; Reads process through js/global: ClojureScript 1.9.854 adds a `process`
+;; stand-in to :advanced builds that hides Node's own from `js/process`.
 (def ^:private env-name
-  (or (some-> (unchecked-get js/process "env") (unchecked-get "JS_RUNTIME_DETECT_ENV"))
+  (or (some-> (unchecked-get js/global "process")
+              (unchecked-get "env")
+              (unchecked-get "JS_RUNTIME_DETECT_ENV"))
       "node"))
 
 (def ^:private actual

@@ -1,21 +1,13 @@
 # js-runtime-detection
 
-A ClojureScript library that detects JS runtime and deployment platform (browser, Node, Deno, Bun, worker, etc.).
-
-Detection works by reading properties of `globalThis`. The library has no dependencies and does not import Node.js built-in modules like `fs` or `os`, which don't exist in browsers or edge runtimes. A missing global gives `nil` instead of an error, so the library loads in any JS environment. Every value is computed once, when `js-runtime-detection.core` loads. If your test setup installs jsdom, load `js-runtime-detection.core` after jsdom is in place.
-
-Properties are read by string key, for example `globalThis["process"]["versions"]["node"]` rather than `globalThis.process.versions.node`. The ClojureScript (Closure compiler) renames dotted property names in `:advanced` builds but never changes string keys, so results are the same in dev builds and `:advanced` builds.
-
-Detection only looks at which globals exist and what they contain, such as `globalThis.Deno` or `navigator.userAgent`. Other JS code running in the same environment, such as a dependency, a polyfill or a test setup, can add or change those globals. For example, a polyfill can define a `process` global in a browser, and jsdom adds `window` and `document` to Node.
-
-Use `js-runtime`, `js-platform` and the other defs to decide how your program behaves, such as how to print output or which APIs to call. Don't treat these values as a guarantee of where your code is running, as they only report what the globals look like. For example, you could have JS code running in a browser that sets `process.versions.node`, which would result in `js-server-runtime?` and `js-runtime-has-node-apis?` returning `true`. For this reason, the values of the public defs in `js-runtime-detection.core` should not be relied on for security decisions.
+**A ClojureScript library that detects JS runtime and deployment platform details.**
 
 <br>
 
 ## Requirements
 
-- ClojureScript 1.9.946 or newer. Tested with `:advanced` builds on 1.9.946 and on 1.10.238 through 1.12.145. ClojureScript 1.7 does not work, because it has no `unchecked-get`.
-- A JS engine with `globalThis` (Node 12+, browsers from 2019 on). Without it, every value is `nil`, `false` or `:unknown`.
+- ClojureScript 1.9.854 or newer. Tested with `:advanced` builds on 1.9.854, 1.9.908, 1.9.946 and 1.10.238 through 1.12.145. Earlier versions do not work, because they have no `unchecked-get`.
+- Any JS engine. In engines without `globalThis` (Node before 12, IE11, Safari before 12.1), the library finds the global object through `self`, `window` or `global` instead.
 
 <br>
 
@@ -126,7 +118,19 @@ The Electron renderer row assumes `nodeIntegration` is enabled. With Electron's 
 
 Cloudflare Workers with the `nodejs_compat` flag (compatibility date 2025-09-15 or later) report `js-runtime-has-node-apis?` as true. The rest of the row is the same.
 
-Automated tests cover Node and jsdom in Node (dev and `:advanced` builds), and Cloudflare Workers with and without `nodejs_compat` (an `:advanced` build run in workerd through Miniflare). The other rows follow from each platform's documented globals and have not been run on those platforms.
+Automated tests cover Node and jsdom in Node (dev and `:advanced` builds), Node without `globalThis`, and Cloudflare Workers with and without `nodejs_compat` (an `:advanced` build run in workerd through Miniflare). The other rows follow from each platform's documented globals and have not been run on those platforms.
+
+<br>
+
+## How it works
+
+Detection works by reading properties of `globalThis`. The library has no dependencies and does not import Node.js built-in modules like `fs` or `os`, which don't exist in browsers or edge runtimes. A missing global gives `nil` instead of an error, so the library loads in any JS environment. Every value is computed once, when `js-runtime-detection.core` loads. If your test setup installs jsdom, load `js-runtime-detection.core` after jsdom is in place.
+
+Properties are read by string key, for example `globalThis["process"]["versions"]["node"]` rather than `globalThis.process.versions.node`. The ClojureScript (Closure compiler) renames dotted property names in `:advanced` builds but never changes string keys, so results are the same in dev builds and `:advanced` builds.
+
+Detection only looks at which globals exist and what they contain, such as `globalThis.Deno` or `navigator.userAgent`. Other JS code running in the same environment, such as a dependency, a polyfill or a test setup, can add or change those globals. For example, a polyfill can define a `process` global in a browser, and jsdom adds `window` and `document` to Node.
+
+Use `js-runtime`, `js-platform` and the other defs to decide how your program behaves, such as how to print output or which APIs to call. Don't treat these values as a guarantee of where your code is running, as they only report what the globals look like. For example, you could have JS code running in a browser that sets `process.versions.node`, which would result in `js-server-runtime?` and `js-runtime-has-node-apis?` returning `true`. For this reason, the values of the public defs in `js-runtime-detection.core` should not be relied on for security decisions.
 
 <br>
 
@@ -137,7 +141,7 @@ The library has zero dependencies, and no `package.json`.
 ```sh
 bb test            # run the tests on Node (via nbb)
 bb test:advanced   # compile the tests with :advanced on the latest ClojureScript, run on Node plain and with jsdom globals
-bb test:compat     # same, on the oldest supported ClojureScript (1.9.946)
+bb test:compat     # same, on the oldest supported ClojureScript (1.9.854)
 bb test:cloudflare # optional: run a probe in workerd (Cloudflare Workers) via Miniflare, with and without nodejs_compat
 bb test:all        # all four of the above (test:cloudflare skips if Miniflare is not installed)
 bb ci              # run the tests and build the jar
@@ -150,15 +154,15 @@ bb docs:git-deps   # after tagging a release: regenerate docs/git-deps.md
 
 - Each test run checks one row of the detection matrix. The `JS_RUNTIME_DETECT_ENV` env var determines the row: `node` (the default) or `jsdom-node`.
 
-- `test:advanced` and `test:compat` compile the tests with `:advanced` optimizations, then run them twice on Node. The first run is no-frills, and the second preloads [test/stubs/jsdom.cjs](test/stubs/jsdom.cjs), which sets the `window`, `document` and jsdom user agent globals that global-jsdom and jest-environment-jsdom install.
+- `test:advanced` and `test:compat` compile the tests with `:advanced` optimizations, then run them three times on Node. The first run is no-frills. The second preloads [test/stubs/jsdom.cjs](test/stubs/jsdom.cjs), which sets the `window`, `document` and jsdom user agent globals that global-jsdom and jest-environment-jsdom install. The third preloads [test/stubs/no-globalthis.cjs](test/stubs/no-globalthis.cjs), which deletes `globalThis` to imitate older engines.
 
 - The `:advanced` runs catch property renaming by the Closure compiler, which dev builds and nbb don't show.
 
-- Both tasks use the same build script, [script/build_advanced.clj](script/build_advanced.clj). It calls `cljs.build.api` rather than `cljs.main`, because ClojureScript 1.9.946 predates `cljs.main`.
+- Both tasks use the same build script, [script/build_advanced.clj](script/build_advanced.clj). It calls `cljs.build.api` rather than `cljs.main`, because ClojureScript 1.9.854 predates `cljs.main`.
 
 - `deps.edn` has one alias per ClojureScript version:
   - `:cljs-latest` uses ClojureScript 1.12.145.
-  - `:cljs-1.9` uses ClojureScript 1.9.946. It forces Clojure 1.9.0 and adds the `jaxb-api` jar, which the ClojureScript 1.9.946 compiler needs to run on Java 11 or newer.
+  - `:cljs-1.9` uses ClojureScript 1.9.854. It forces Clojure 1.8.0, because under Clojure 1.9 that compiler writes `##Inf` into its output, which the Closure compiler can't parse. It also adds the `jaxb-api` jar, which the ClojureScript 1.9.854 compiler needs to run on Java 11 or newer.
 
 - There are two test entrypoints:
   - [runner.cljs](test/js_runtime_detection/runner.cljs) is for nbb.

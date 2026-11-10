@@ -8,7 +8,8 @@ All notable changes to this project will be documented in this file. This change
 - Initial release. Extracted from `sugar.js-runtime-detection` in [sugar](https://github.com/paintparty/sugar).
 - `js-runtime`, `js-platform`, `js-server-runtime?`, `js-runtime-has-dom?`, `js-runtime-has-jsdom?`, `js-runtime-has-node-apis?` and `js-runtime-is-strict-node?`.
 - Tests that compile with `:advanced` optimizations and run on Node, with and without jsdom globals.
-- Tests that run in workerd (Cloudflare Workers) through Miniflare, with and without `nodejs_compat`, and on ClojureScript 1.9.946, the oldest supported version.
+- Tests that run in workerd (Cloudflare Workers) through Miniflare, with and without `nodejs_compat`, and on ClojureScript 1.9.854, the oldest supported version.
+- Engines without `globalThis` are supported: the library falls back to `self`, `window` or `global`.
 
 ### Fixed
 Compared with the version in sugar:

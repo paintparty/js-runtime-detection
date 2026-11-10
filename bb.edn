@@ -2,13 +2,15 @@
  {:init
   (defn run-advanced
     "Compiles the tests with :advanced using the ClojureScript from `alias`,
-     then runs them on Node, plain and with jsdom globals stubbed in."
+     then runs them on Node three times: plain, with jsdom globals stubbed in,
+     and with globalThis deleted."
     [alias out-dir]
     (let [test-js (str out-dir "/main.js")]
       (clojure (str "-M:" alias) "script/build_advanced.clj" out-dir)
       (shell "node" test-js)
       (shell {:extra-env {"JS_RUNTIME_DETECT_ENV" "jsdom-node"}}
-             "node" "-r" "./test/stubs/jsdom.cjs" test-js)))
+             "node" "-r" "./test/stubs/jsdom.cjs" test-js)
+      (shell "node" "-r" "./test/stubs/no-globalthis.cjs" test-js)))
 
   ;; Test
   ;; ---------------------------------------------------------------------------
@@ -17,12 +19,12 @@
    :task (shell "npx" "--yes" "nbb" "-cp" "src:test" "test/js_runtime_detection/runner.cljs")}
 
   test:advanced
-  {:doc  "Compile the tests with :advanced on the latest ClojureScript and run them on Node, plain and with jsdom globals. Catches property renaming that dev builds don't show."
+  {:doc  "Compile the tests with :advanced on the latest ClojureScript and run them on Node: plain, with jsdom globals, and without globalThis. Catches property renaming that dev builds don't show."
    :task (run-advanced "cljs-latest" "target/cljs-latest")}
 
   test:compat
-  {:doc  "Compile the tests with :advanced on the oldest supported ClojureScript (1.9.946) and run them on Node, plain and with jsdom globals."
-   :task (run-advanced "cljs-1.9" "target/cljs-1.9")}
+  {:doc  "Compile the tests with :advanced on the oldest supported ClojureScript (1.9.854) and run them on Node: plain, with jsdom globals, and without globalThis."
+   :task (run-advanced "cljs-1.9" "target/cljs-1.9.854")}
 
   test:cloudflare
   {:doc      "Compile a probe with :advanced and run it in workerd (Cloudflare's Workers runtime) through Miniflare, with and without nodejs_compat. Optional: skipped unless Miniflare is installed in test/cloudflare."

@@ -80,13 +80,18 @@
 ;;   2025-09-15 or later) report js-runtime-has-node-apis? as true. The rest of
 ;;   the row is the same.
 ;; - Automated tests cover Node and jsdom in Node (dev and :advanced builds),
-;;   and Cloudflare Workers with and without nodejs_compat (:advanced build in
-;;   workerd, via Miniflare). The other rows follow from each platform's
+;;   Node without `globalThis`, and Cloudflare Workers with and without
+;;   nodejs_compat (:advanced build in workerd, via Miniflare). The other rows follow from each platform's
 ;;   documented globals and have not been run on those platforms.
 
 
+;; The global object. Engines without `globalThis` (Node before 12, IE11, Safari
+;; before 12.1) still have one of the older names for it.
 (def ^:private global-ref
-  (when (exists? js/globalThis) js/globalThis))
+  (cond (exists? js/globalThis) js/globalThis
+        (exists? js/self)       js/self
+        (exists? js/window)     js/window
+        (exists? js/global)     js/global))
 
 (defn- gget
   "Reads a property path from `globalThis` by string keys, e.g.
