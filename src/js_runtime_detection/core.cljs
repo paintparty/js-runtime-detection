@@ -6,65 +6,65 @@
    once, when the namespace loads.
 
    Public defs:
-     `js-runtime`                 - JS runtime (`:node`, `:deno`, ...)
-     `js-platform`                - Deployment platform (`:cloudflare`, ...)
-     `js-server-runtime?`         - Am I server-side?
-     `js-runtime-has-dom?`        - Do I have DOM APIs?
-     `js-runtime-has-jsdom?`      - Is jsdom active?
-     `js-runtime-has-node-apis?`  - Can I use `fs`, `process.env`, etc.?
-     `js-runtime-is-strict-node?` - Am I in actual Node (not Bun/Deno compat)?")
+     `js-runtime`                - JS runtime (`:node`, `:deno`, ...)
+     `js-platform`               - Deployment platform (`:cloudflare`, ...)
+     `js-runtime-is-server`      - Am I server-side?
+     `js-runtime-has-dom`        - Do I have DOM APIs?
+     `js-runtime-has-jsdom`      - Is jsdom active?
+     `js-runtime-has-node-apis`  - Can I use `fs`, `process.env`, etc.?
+     `js-runtime-is-strict-node` - Am I in actual Node (not Bun/Deno compat)?")
 
 
 ;; PUBLIC API SUMMARY
-;; +-----------------------------+----------------+----------------------------------------------------+
-;; | def                         |  Return type   | Purpose                                            |
-;; +-----------------------------+----------------+----------------------------------------------------+
-;; | js-runtime                  | keyword        | Which runtime (Node, Deno, Bun, workerd, browser)  |
-;; | js-platform                 | keyword or nil | Which deployment platform (Cloudflare, Vercel ...) |
-;; | js-server-runtime?          | boolean        | Am I server-side? (convenience composite)          |
-;; | js-runtime-has-dom?         | boolean        | Do I have DOM APIs?                                |
-;; | js-runtime-has-jsdom?       | boolean        | Is jsdom active?                                   |
-;; | js-runtime-has-node-apis?   | boolean        | Can I use fs/process.env/etc.?                     |
-;; | js-runtime-is-strict-node?  | boolean        | Am I in actual Node (not Bun/Deno compat)?         |
-;; +-----------------------------+----------------+----------------------------------------------------+
+;; +---------------------------+----------------+----------------------------------------------------+
+;; | def                       | Return type    | Purpose                                            |
+;; +---------------------------+----------------+----------------------------------------------------+
+;; | js-runtime                | keyword        | Which runtime (Node, Deno, Bun, workerd, browser)  |
+;; | js-platform               | keyword or nil | Which deployment platform (Cloudflare, Vercel ...) |
+;; | js-runtime-is-server      | boolean        | Am I server-side? (convenience composite)          |
+;; | js-runtime-has-dom        | boolean        | Do I have DOM APIs?                                |
+;; | js-runtime-has-jsdom      | boolean        | Is jsdom active?                                   |
+;; | js-runtime-has-node-apis  | boolean        | Can I use fs/process.env/etc.?                     |
+;; | js-runtime-is-strict-node | boolean        | Am I in actual Node (not Bun/Deno compat)?         |
+;; +---------------------------+----------------+----------------------------------------------------+
 
 
 ;; DETECTION MATRIX for public defs:
-;; ╔════════════════════╦════════════════════╦═══════════════╦════════════════════╦═════════════════════╦═══════════════════════╦═══════════════════════════╦════════════════════════════╗
-;; ║ Environment        ║ js-runtime         ║ js-platform   ║ js-server-runtime? ║ js-runtime-has-dom? ║ js-runtime-has-jsdom? ║ js-runtime-has-node-apis? ║ js-runtime-is-strict-node? ║
-;; ╚════════════════════╩════════════════════╩═══════════════╩════════════════════╩═════════════════════╩═══════════════════════╩═══════════════════════════╩════════════════════════════╝
-;; │ Real browser       │ :browser           │ nil           │ false              │ true                │ false                 │ false                     │ false                      │
-;; ├────────────────────┼────────────────────┼───────────────┼────────────────────┼─────────────────────┼───────────────────────┼───────────────────────────┼────────────────────────────┤
-;; │ Node               │ :node              │ nil           │ true               │ false               │ false                 │ true                      │ true                       │
-;; ├────────────────────┼────────────────────┼───────────────┼────────────────────┼─────────────────────┼───────────────────────┼───────────────────────────┼────────────────────────────┤
-;; │ jsdom in Node      │ :node              │ nil           │ true               │ true                │ true                  │ true                      │ true                       │
-;; ├────────────────────┼────────────────────┼───────────────┼────────────────────┼─────────────────────┼───────────────────────┼───────────────────────────┼────────────────────────────┤
-;; │ Deno 2             │ :deno              │ nil           │ true               │ false               │ false                 │ true                      │ false                      │
-;; ├────────────────────┼────────────────────┼───────────────┼────────────────────┼─────────────────────┼───────────────────────┼───────────────────────────┼────────────────────────────┤
-;; │ jsdom in Deno      │ :deno              │ nil           │ true               │ true                │ true                  │ true                      │ false                      │
-;; ├────────────────────┼────────────────────┼───────────────┼────────────────────┼─────────────────────┼───────────────────────┼───────────────────────────┼────────────────────────────┤
-;; │ Bun                │ :bun               │ nil           │ true               │ false               │ false                 │ true                      │ false                      │
-;; ├────────────────────┼────────────────────┼───────────────┼────────────────────┼─────────────────────┼───────────────────────┼───────────────────────────┼────────────────────────────┤
-;; │ jsdom in Bun       │ :bun               │ nil           │ true               │ true                │ true                  │ true                      │ false                      │
-;; ├────────────────────┼────────────────────┼───────────────┼────────────────────┼─────────────────────┼───────────────────────┼───────────────────────────┼────────────────────────────┤
-;; │ Cloudflare Workers │ :workerd           │ :cloudflare   │ true               │ false               │ false                 │ false                     │ false                      │
-;; ├────────────────────┼────────────────────┼───────────────┼────────────────────┼─────────────────────┼───────────────────────┼───────────────────────────┼────────────────────────────┤
-;; │ Vercel Edge*       │ :workerd           │ :vercel-edge  │ true               │ false               │ false                 │ false                     │ false                      │
-;; ├────────────────────┼────────────────────┼───────────────┼────────────────────┼─────────────────────┼───────────────────────┼───────────────────────────┼────────────────────────────┤
-;; │ Netlify Edge       │ :deno              │ :netlify-edge │ true               │ false               │ false                 │ false                     │ false                      │
-;; ├────────────────────┼────────────────────┼───────────────┼────────────────────┼─────────────────────┼───────────────────────┼───────────────────────────┼────────────────────────────┤
-;; │ Fastly Compute*    │ :unknown           │ :fastly       │ true               │ false               │ false                 │ false                     │ false                      │
-;; ├────────────────────┼────────────────────┼───────────────┼────────────────────┼─────────────────────┼───────────────────────┼───────────────────────────┼────────────────────────────┤
-;; │ Electron renderer  │ :electron-renderer │ nil           │ true               │ true                │ false                 │ true                      │ false                      │
-;; ├────────────────────┼────────────────────┼───────────────┼────────────────────┼─────────────────────┼───────────────────────┼───────────────────────────┼────────────────────────────┤
-;; │ Electron main      │ :node              │ nil           │ true               │ false               │ false                 │ true                      │ true                       │
-;; ├────────────────────┼────────────────────┼───────────────┼────────────────────┼─────────────────────┼───────────────────────┼───────────────────────────┼────────────────────────────┤
-;; │ React Native       │ :react-native      │ nil           │ false              │ false               │ false                 │ false                     │ false                      │
-;; ├────────────────────┼────────────────────┼───────────────┼────────────────────┼─────────────────────┼───────────────────────┼───────────────────────────┼────────────────────────────┤
-;; │ Service Worker     │ :service-worker    │ nil           │ false              │ false               │ false                 │ false                     │ false                      │
-;; ├────────────────────┼────────────────────┼───────────────┼────────────────────┼─────────────────────┼───────────────────────┼───────────────────────────┼────────────────────────────┤
-;; │ Web Worker         │ :web-worker        │ nil           │ false              │ false               │ false                 │ false                     │ false                      │
-;; └────────────────────┴────────────────────┴───────────────┴────────────────────┴─────────────────────┴───────────────────────┴───────────────────────────┴────────────────────────────┘
+;; ╔════════════════════╦════════════════════╦═══════════════╦══════════════════════╦════════════════════╦══════════════════════╦══════════════════════════╦═══════════════════════════╗
+;; ║ Environment        ║ js-runtime         ║ js-platform   ║ js-runtime-is-server ║ js-runtime-has-dom ║ js-runtime-has-jsdom ║ js-runtime-has-node-apis ║ js-runtime-is-strict-node ║
+;; ╚════════════════════╩════════════════════╩═══════════════╩══════════════════════╩════════════════════╩══════════════════════╩══════════════════════════╩═══════════════════════════╝
+;; │ Real browser       │ :browser           │ nil           │ false                │ true               │ false                │ false                    │ false                     │
+;; ├────────────────────┼────────────────────┼───────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
+;; │ Node               │ :node              │ nil           │ true                 │ false              │ false                │ true                     │ true                      │
+;; ├────────────────────┼────────────────────┼───────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
+;; │ jsdom in Node      │ :node              │ nil           │ true                 │ true               │ true                 │ true                     │ true                      │
+;; ├────────────────────┼────────────────────┼───────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
+;; │ Deno 2             │ :deno              │ nil           │ true                 │ false              │ false                │ true                     │ false                     │
+;; ├────────────────────┼────────────────────┼───────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
+;; │ jsdom in Deno      │ :deno              │ nil           │ true                 │ true               │ true                 │ true                     │ false                     │
+;; ├────────────────────┼────────────────────┼───────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
+;; │ Bun                │ :bun               │ nil           │ true                 │ false              │ false                │ true                     │ false                     │
+;; ├────────────────────┼────────────────────┼───────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
+;; │ jsdom in Bun       │ :bun               │ nil           │ true                 │ true               │ true                 │ true                     │ false                     │
+;; ├────────────────────┼────────────────────┼───────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
+;; │ Cloudflare Workers │ :workerd           │ :cloudflare   │ true                 │ false              │ false                │ false                    │ false                     │
+;; ├────────────────────┼────────────────────┼───────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
+;; │ Vercel Edge*       │ :workerd           │ :vercel-edge  │ true                 │ false              │ false                │ false                    │ false                     │
+;; ├────────────────────┼────────────────────┼───────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
+;; │ Netlify Edge       │ :deno              │ :netlify-edge │ true                 │ false              │ false                │ false                    │ false                     │
+;; ├────────────────────┼────────────────────┼───────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
+;; │ Fastly Compute*    │ :unknown           │ :fastly       │ true                 │ false              │ false                │ false                    │ false                     │
+;; ├────────────────────┼────────────────────┼───────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
+;; │ Electron renderer  │ :electron-renderer │ nil           │ true                 │ true               │ false                │ true                     │ false                     │
+;; ├────────────────────┼────────────────────┼───────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
+;; │ Electron main      │ :node              │ nil           │ true                 │ false              │ false                │ true                     │ true                      │
+;; ├────────────────────┼────────────────────┼───────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
+;; │ React Native       │ :react-native      │ nil           │ false                │ false              │ false                │ false                    │ false                     │
+;; ├────────────────────┼────────────────────┼───────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
+;; │ Service Worker     │ :service-worker    │ nil           │ false                │ false              │ false                │ false                    │ false                     │
+;; ├────────────────────┼────────────────────┼───────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
+;; │ Web Worker         │ :web-worker        │ nil           │ false                │ false              │ false                │ false                    │ false                     │
+;; └────────────────────┴────────────────────┴───────────────┴──────────────────────┴────────────────────┴──────────────────────┴──────────────────────────┴───────────────────────────┘
 
 
 ;; NOTES on the matrix:
@@ -77,7 +77,7 @@
 ;;   :workerd. The :fastly platform check relies on a `fastly` global, which
 ;;   newer versions of Fastly's JS runtime may no longer define.
 ;; - Cloudflare Workers with the nodejs_compat flag (compatibility date
-;;   2025-09-15 or later) report js-runtime-has-node-apis? as true. The rest of
+;;   2025-09-15 or later) report js-runtime-has-node-apis as true. The rest of
 ;;   the row is the same.
 ;; - Automated tests cover Node and jsdom in Node (dev and :advanced builds),
 ;;   Node without `globalThis`, and Cloudflare Workers with and without
@@ -111,49 +111,49 @@
 ;; Cached global lookups (one-time at namespace load)
 ;; -------------------------------------------------------------------
 
-(def ^:private ua       (gget "navigator" "userAgent"))
-(def ^:private win      (gget "window"))
-(def ^:private deno?    (boolean (gget "Deno" "version" "deno")))
-(def ^:private bun?     (boolean (gget "Bun")))
-(def ^:private workerd? (= ua "Cloudflare-Workers"))
+(def ^:private ua                 (gget "navigator" "userAgent"))
+(def ^:private win                (gget "window"))
+(def ^:private runtime-is-deno    (boolean (gget "Deno" "version" "deno")))
+(def ^:private runtime-is-bun     (boolean (gget "Bun")))
+(def ^:private runtime-is-workerd (= ua "Cloudflare-Workers"))
 
 ;; -------------------------------------------------------------------
 ;; Primitive capability flags
 ;; -------------------------------------------------------------------
 
-(def js-runtime-has-dom?
+(def js-runtime-has-dom
   "True anywhere `window` and `document` globals exist: real browsers, jsdom,
    and the Electron renderer process. Use when your code needs DOM APIs
    regardless of whether they're real or simulated (e.g., rendering components,
    attaching event listeners, measuring element dimensions)."
   (boolean (and win (gget "document"))))
 
-(def js-runtime-has-jsdom?
+(def js-runtime-has-jsdom
   "True whenever jsdom is active, regardless of underlying runtime (Node, Deno,
    or Bun). Use to detect test environments that simulate a browser on top of a
    server runtime."
   (boolean (some-> ua (.includes "jsdom"))))
 
-(def js-runtime-has-node-apis?
+(def js-runtime-has-node-apis
   "Resolves to `true` when Node's `process.versions.node` is present. Includes
    Node itself, Deno 2+ (Node compat mode), Bun, Electron (both processes),
    jsdom (which runs in Node), and Cloudflare Workers with the `nodejs_compat`
    flag (compatibility date 2025-09-15 or later). Use when you need to check for
    access to Node APIs like `fs`, `path`, `process.env`, or native modules.
-   Note: this is `true` under jsdom, so pair with `(not js-runtime-has-dom?)` if
+   Note: this is `true` under jsdom, so pair with `(not js-runtime-has-dom)` if
    you want to exclude test envs. For a strict Node-only check, use
    `(= js-runtime :node)`."
   (boolean (gget "process" "versions" "node")))
 
-(def js-runtime-is-strict-node?
+(def js-runtime-is-strict-node
   "True only in actual Node.js. Excludes Bun, Deno and Cloudflare Workers even
    when they run in Node compatibility mode. Checks that `process.release.name`
    is `\"node\"`, which Deno and Cloudflare's `nodejs_compat` also report, so
    those runtimes are excluded explicitly."
   (and (= (gget "process" "release" "name") "node")
-       (not deno?)
-       (not bun?)
-       (not workerd?)))
+       (not runtime-is-deno)
+       (not runtime-is-bun)
+       (not runtime-is-workerd)))
 
 
 (def js-runtime
@@ -170,7 +170,7 @@
    `:react-native`
    `:unknown`
 
-   The `:node` branch uses `js-runtime-is-strict-node?`, so Deno, Bun and
+   The `:node` branch uses `js-runtime-is-strict-node`, so Deno, Bun and
    Cloudflare Workers in Node compatibility mode are not reported as `:node`.
    jsdom reports the runtime it runs on, not `:browser`.
 
@@ -193,13 +193,13 @@
    * Unverified. On Vercel Edge this may be `:unknown`."
   (or
    ;; Deno - must be checked b4 Node (Deno 2 shims process.versions.node)
-   (when deno? :deno)
+   (when runtime-is-deno :deno)
 
    ;; Bun - must be checked b4 Node (Bun shims process.versions.node)
-   (when bun? :bun)
+   (when runtime-is-bun :bun)
 
    ;; workerd (Cloudflare Workers runtime)
-   (when workerd? :workerd)
+   (when runtime-is-workerd :workerd)
 
    ;; Service Worker
    (when (= (gget "self" "constructor" "name")
@@ -216,7 +216,7 @@
 
    ;; Browser - jsdom also defines window and document, so it is skipped
    ;; here and falls through to the runtime it runs on
-   (when (and js-runtime-has-dom? (not js-runtime-has-jsdom?))
+   (when (and js-runtime-has-dom (not js-runtime-has-jsdom))
      :browser)
 
    ;; React Native
@@ -225,7 +225,7 @@
      :react-native)
 
    ;; Strict Node - uses process.release.name, which Deno/Bun don't fake
-   (when js-runtime-is-strict-node? :node)
+   (when js-runtime-is-strict-node :node)
 
    :unknown))
 
@@ -256,19 +256,19 @@
   (cond
     (gget "Netlify")            :netlify-edge
     (gget "EdgeRuntime")        :vercel-edge
-    workerd?                    :cloudflare
+    runtime-is-workerd          :cloudflare
     (gget "fastly")             :fastly
     :else                       nil))
 
 
-(def js-server-runtime?
+(def js-runtime-is-server
   "Resolves to `true` in server-side JS runtimes: Node, Deno, Bun, and all edge
    platforms (Cloudflare, Vercel, Netlify, Fastly), plus Electron main.
 
    Resolves to `false` in real browsers, web workers, and React Native.
 
    Returns `true` under jsdom (jsdom has Node APIs available even though it
-   simulates a browser). Pair with `(not js-runtime-has-dom?)` if you need to
+   simulates a browser). Pair with `(not js-runtime-has-dom)` if you need to
    exclude environments where a DOM is present (real or simulated).
 
    | Environment        |  Value  |
@@ -289,7 +289,7 @@
    | Service Worker     | `false` |
 
    * Unverified."
-  (if (and js-runtime-has-dom? (not (gget "process")))
+  (if (and js-runtime-has-dom (not (gget "process")))
     false  ; fast path: real browser
     (or (some? js-platform)
-        js-runtime-has-node-apis?)))
+        js-runtime-has-node-apis)))

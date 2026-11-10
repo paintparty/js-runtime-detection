@@ -7,18 +7,18 @@
    environment variable the test process runs under."
   {"node"       {:js-runtime                 :node
                  :js-platform                nil
-                 :js-server-runtime?         true
-                 :js-runtime-has-dom?        false
-                 :js-runtime-has-jsdom?      false
-                 :js-runtime-has-node-apis?  true
-                 :js-runtime-is-strict-node? true}
+                 :js-runtime-is-server         true
+                 :js-runtime-has-dom        false
+                 :js-runtime-has-jsdom      false
+                 :js-runtime-has-node-apis  true
+                 :js-runtime-is-strict-node true}
    "jsdom-node" {:js-runtime                 :node
                  :js-platform                nil
-                 :js-server-runtime?         true
-                 :js-runtime-has-dom?        true
-                 :js-runtime-has-jsdom?      true
-                 :js-runtime-has-node-apis?  true
-                 :js-runtime-is-strict-node? true}})
+                 :js-runtime-is-server         true
+                 :js-runtime-has-dom        true
+                 :js-runtime-has-jsdom      true
+                 :js-runtime-has-node-apis  true
+                 :js-runtime-is-strict-node true}})
 
 ;; Reads process through js/global: ClojureScript 1.9.854 adds a `process`
 ;; stand-in to :advanced builds that hides Node's own from `js/process`.
@@ -31,11 +31,11 @@
 (def ^:private actual
   {:js-runtime                 rt/js-runtime
    :js-platform                rt/js-platform
-   :js-server-runtime?         rt/js-server-runtime?
-   :js-runtime-has-dom?        rt/js-runtime-has-dom?
-   :js-runtime-has-jsdom?      rt/js-runtime-has-jsdom?
-   :js-runtime-has-node-apis?  rt/js-runtime-has-node-apis?
-   :js-runtime-is-strict-node? rt/js-runtime-is-strict-node?})
+   :js-runtime-is-server         rt/js-runtime-is-server
+   :js-runtime-has-dom        rt/js-runtime-has-dom
+   :js-runtime-has-jsdom      rt/js-runtime-has-jsdom
+   :js-runtime-has-node-apis  rt/js-runtime-has-node-apis
+   :js-runtime-is-strict-node rt/js-runtime-is-strict-node})
 
 (deftest matches-detection-matrix-row
   (is (contains? expected env-name) (str "Unknown JS_RUNTIME_DETECT_ENV: " env-name))

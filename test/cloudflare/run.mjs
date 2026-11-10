@@ -18,17 +18,17 @@ const compatibilityDate = '2026-07-01';
 const row = {
   'js-runtime':                 'workerd',
   'js-platform':                'cloudflare',
-  'js-server-runtime?':         true,
-  'js-runtime-has-dom?':        false,
-  'js-runtime-has-jsdom?':      false,
-  'js-runtime-has-node-apis?':  false,
-  'js-runtime-is-strict-node?': false,
+  'js-runtime-is-server':         true,
+  'js-runtime-has-dom':        false,
+  'js-runtime-has-jsdom':      false,
+  'js-runtime-has-node-apis':  false,
+  'js-runtime-is-strict-node': false,
 };
 
 const cases = [
   { name: 'Cloudflare Workers', flags: [], expected: row },
   { name: 'Cloudflare Workers + nodejs_compat', flags: ['nodejs_compat'],
-    expected: { ...row, 'js-runtime-has-node-apis?': true } },
+    expected: { ...row, 'js-runtime-has-node-apis': true } },
 ];
 
 let failed = 0;

@@ -8,8 +8,8 @@
                (js/JSON.stringify
                 #js {"js-runtime"                 (some-> rt/js-runtime name)
                      "js-platform"                (some-> rt/js-platform name)
-                     "js-server-runtime?"         rt/js-server-runtime?
-                     "js-runtime-has-dom?"        rt/js-runtime-has-dom?
-                     "js-runtime-has-jsdom?"      rt/js-runtime-has-jsdom?
-                     "js-runtime-has-node-apis?"  rt/js-runtime-has-node-apis?
-                     "js-runtime-is-strict-node?" rt/js-runtime-is-strict-node?}))
+                     "js-runtime-is-server"         rt/js-runtime-is-server
+                     "js-runtime-has-dom"        rt/js-runtime-has-dom
+                     "js-runtime-has-jsdom"      rt/js-runtime-has-jsdom
+                     "js-runtime-has-node-apis"  rt/js-runtime-has-node-apis
+                     "js-runtime-is-strict-node" rt/js-runtime-is-strict-node}))
