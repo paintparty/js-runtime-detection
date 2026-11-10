@@ -123,6 +123,20 @@ bb ci             # run the tests and build the jar
 bb install        # install the jar to ~/.m2
 ```
 
+### How the tests are set up
+
+- Each test run checks one row of the detection matrix. The `JRD_ENV` environment variable picks the row: `node` (the default) or `jsdom-node`.
+- `test:advanced` and `test:compat` compile the tests with `:advanced` optimizations, then run them on Node twice. The first run is plain. The second preloads [test/stubs/jsdom.cjs](test/stubs/jsdom.cjs), which sets the `window`, `document` and jsdom user agent globals that global-jsdom and jest-environment-jsdom install.
+- The `:advanced` runs catch property renaming by the Closure compiler, which dev builds and nbb don't show.
+- Both tasks use the same build script, [script/build_advanced.clj](script/build_advanced.clj). It calls `cljs.build.api` rather than `cljs.main`, because ClojureScript 1.9.946 predates `cljs.main`.
+- `deps.edn` has one alias per ClojureScript version:
+  - `:cljs-latest` uses ClojureScript 1.12.145.
+  - `:cljs-1.9` uses ClojureScript 1.9.946. It forces Clojure 1.9.0 and adds the `jaxb-api` jar, which that compiler needs to run on Java 11 or newer.
+- There are two test entrypoints:
+  - [runner.cljs](test/js_runtime_detection/runner.cljs) is for nbb.
+  - [advanced_runner.cljs](test/js_runtime_detection/advanced_runner.cljs) is for the compiled builds. It calls `(enable-console-print!)`, which ClojureScript 1.9 needs on Node and which nbb doesn't have.
+- A failing test sets the process exit code to 1, so `bb test` and `bb ci` stop.
+
 ## License
 
 Copyright © 2026 Jeremiah Coyle
