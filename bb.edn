@@ -57,8 +57,34 @@
 
   ;; Docs
   ;; ---------------------------------------------------------------------------
+  docs:readme
+  {:doc      "Update the version numbers in README.md to match the latest tag (v0.2.0 -> 0.2.0). Leaves README.md alone if there are no tags yet."
+   :requires ([babashka.process :as p]
+              [clojure.string :as str])
+   :task
+   (let [tag (-> (p/shell {:out :string :err :string :continue true}
+                          "git describe --tags --abbrev=0")
+                 :out
+                 str/trim
+                 not-empty)
+         lib (second (re-find (re-pattern "[(]def lib '(\\S+)[)]")
+                              (slurp "build.clj")))]
+     (if tag
+       ;; Rewrites the deps.edn and Leiningen coordinates in the Setup section
+       (let [version (str/replace tag (re-pattern "^v") "")
+             q       (java.util.regex.Pattern/quote lib)]
+         (spit "README.md"
+               (-> (slurp "README.md")
+                   (str/replace (re-pattern (str "(" q " [{]:mvn/version \")[^\"]+(\"[}])"))
+                                (str "$1" version "$2"))
+                   (str/replace (re-pattern (str "([\\[]" q " \")[^\"]+(\"[\\]])"))
+                                (str "$1" version "$2"))))
+         (println "Updated README.md to version" version))
+       (println "No tags yet, so README.md is unchanged. Rerun after tagging a release.")))}
+
   docs:git-deps
-  {:doc      "Regenerate docs/git-deps.md from the latest tag, and update the version numbers in README.md to match it. Uses HEAD for the git deps doc, and leaves README.md alone, if there are no tags yet."
+  {:doc      "Regenerate docs/git-deps.md from the latest tag.
+              Uses HEAD if there are no tags yet."
    :requires ([babashka.process :as p]
               [clojure.string :as str])
    :task
@@ -82,16 +108,6 @@
                (str/replace "{{URL}}" (str "\"" url "\""))
                (str/replace "{{TAG}}" (str "\"" (or tag "<no tag yet>") "\""))
                (str/replace "{{SHA}}" (str "\"" sha "\""))))
-     (println "Wrote docs/git-deps.md for" (or tag "HEAD") sha)
-     (if tag
-       ;; v0.2.0 -> 0.2.0 in the deps.edn and Leiningen coordinates
-       (let [version (str/replace tag (re-pattern "^v") "")
-             q       (java.util.regex.Pattern/quote lib)]
-         (spit "README.md"
-               (-> (slurp "README.md")
-                   (str/replace (re-pattern (str "(" q " [{]:mvn/version \")[^\"]+(\"[}])"))
-                                (str "$1" version "$2"))
-                   (str/replace (re-pattern (str "([\\[]" q " \")[^\"]+(\"[\\]])"))
-                                (str "$1" version "$2"))))
-         (println "Updated README.md to version" version))
-       (println "No tags yet, so the SHA is from HEAD and README.md is unchanged. Rerun after tagging a release.")))}}}
+     (when-not tag
+       (println "No tags yet, so the SHA is from HEAD. Rerun after tagging a release."))
+     (println "Wrote docs/git-deps.md for" (or tag "HEAD") sha))}}}

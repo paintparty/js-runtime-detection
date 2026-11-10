@@ -142,7 +142,8 @@ bb test:cloudflare # optional: run a probe in workerd (Cloudflare Workers) via M
 bb test:all        # all four of the above (test:cloudflare skips if Miniflare is not installed)
 bb ci              # run the tests and build the jar
 bb install         # install the jar to ~/.m2
-bb docs:git-deps   # after tagging a release: update README versions and docs/git-deps.md
+bb docs:readme     # after tagging a release: update the version numbers in this README
+bb docs:git-deps   # after tagging a release: regenerate docs/git-deps.md
 ```
 
 ### How the tests work 
@@ -179,7 +180,12 @@ The task builds [worker_probe.cljs](test/js_runtime_detection/worker_probe.cljs)
 
 ### Updating docs after a release
 
-After tagging a release (for example `git tag v0.2.0`), run `bb docs:git-deps`. It updates the version numbers in the Setup section of this README to match the tag, and regenerates [docs/git-deps.md](docs/git-deps.md) from [docs/git-deps.template.md](docs/git-deps.template.md) with the tag and its commit SHA. Commit both files and push.
+After tagging a release (for example `git tag v0.2.0`), run both docs tasks:
+
+- `bb docs:readme` updates the version numbers in the Setup section of this README to match the tag.
+- `bb docs:git-deps` regenerates [docs/git-deps.md](docs/git-deps.md) from [docs/git-deps.template.md](docs/git-deps.template.md) with the tag and its commit SHA.
+
+Commit both files and push.
 
 <br>
 
