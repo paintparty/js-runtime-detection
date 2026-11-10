@@ -4,7 +4,7 @@
                    from `alias`, then runs them on Node, plain and with jsdom
                    globals stubbed in."
                   [alias out-dir]
-                  (let [test-js (str out-dir "/test.js")]
+                  (let [test-js (str out-dir "/main.js")]
                     (clojure (str "-M:" alias) "script/build_advanced.clj" out-dir)
                     (shell "node" test-js)
                     (shell {:extra-env {"JS_RUNTIME_DETECT_ENV" "jsdom-node"}}
@@ -19,8 +19,13 @@
   test:compat   {:doc  "Compile the tests with :advanced on the oldest supported ClojureScript (1.9.946) and run them on Node, plain and with jsdom globals."
                  :task (run-advanced "cljs-1.9" "target/cljs-1.9")}
 
-  test          {:doc     "Run test:node, test:advanced and test:compat."
-                 :depends [test:node test:advanced test:compat]}
+  test:cloudflare {:doc  "Compile a probe with :advanced and run it in workerd (Cloudflare's Workers runtime) through Miniflare, with and without nodejs_compat. Requires `npm install`."
+                   :task (do (clojure "-M:cljs-latest" "script/build_advanced.clj" "target/cloudflare-probe"
+                                      "js-runtime-detection.worker-probe" "browser")
+                             (shell "node" "test/cloudflare/run.mjs" "target/cloudflare-probe/main.js"))}
+
+  test          {:doc     "Run test:node, test:advanced, test:compat and test:cloudflare."
+                 :depends [test:node test:advanced test:compat test:cloudflare]}
 
   ci            {:doc     "Run the tests and build the JAR."
                  :depends [test]

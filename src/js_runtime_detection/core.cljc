@@ -49,11 +49,11 @@
 ;; ├────────────────────┼────────────────────┼─────────────────┤
 ;; │ Cloudflare Workers │ :workerd           │ :cloudflare     │
 ;; ├────────────────────┼────────────────────┼─────────────────┤
-;; │ Vercel Edge        │ :workerd           │ :vercel-edge    │
+;; │ Vercel Edge*       │ :workerd           │ :vercel-edge    │
 ;; ├────────────────────┼────────────────────┼─────────────────┤
 ;; │ Netlify Edge       │ :deno              │ :netlify-edge   │
 ;; ├────────────────────┼────────────────────┼─────────────────┤
-;; │ Fastly Compute     │ :unknown           │ :fastly         │
+;; │ Fastly Compute*    │ :unknown           │ :fastly         │
 ;; ├────────────────────┼────────────────────┼─────────────────┤
 ;; │ Electron renderer  │ :electron-renderer │ nil             │
 ;; ├────────────────────┼────────────────────┼─────────────────┤
@@ -87,11 +87,11 @@
 ;; ├────────────────────┼────────────────────┼─────────────────────┼───────────────────────┼───────────────────────────┼──────────────────────────────┤
 ;; │ Cloudflare Workers │ true               │ false               │ false                 │ false                     │ false                        │
 ;; ├────────────────────┼────────────────────┼─────────────────────┼───────────────────────┼───────────────────────────┼──────────────────────────────┤
-;; │ Vercel Edge        │ true               │ false               │ false                 │ false                     │ false                        │
+;; │ Vercel Edge*       │ true               │ false               │ false                 │ false                     │ false                        │
 ;; ├────────────────────┼────────────────────┼─────────────────────┼───────────────────────┼───────────────────────────┼──────────────────────────────┤
 ;; │ Netlify Edge       │ true               │ false               │ false                 │ false                     │ false                        │
 ;; ├────────────────────┼────────────────────┼─────────────────────┼───────────────────────┼───────────────────────────┼──────────────────────────────┤
-;; │ Fastly Compute     │ true               │ false               │ false                 │ false                     │ false                        │
+;; │ Fastly Compute*    │ true               │ false               │ false                 │ false                     │ false                        │
 ;; ├────────────────────┼────────────────────┼─────────────────────┼───────────────────────┼───────────────────────────┼──────────────────────────────┤
 ;; │ Electron renderer  │ true               │ true                │ false                 │ true                      │ false                        │
 ;; ├────────────────────┼────────────────────┼─────────────────────┼───────────────────────┼───────────────────────────┼──────────────────────────────┤
@@ -110,9 +110,17 @@
 ;;   Electron's defaults (contextIsolation on, nodeIntegration off) the
 ;;   renderer has no `process` global and reports the same values as a real
 ;;   browser.
-;; - Automated tests cover Node and jsdom in Node, in both dev and :advanced
-;;   builds. The other rows follow from each platform's documented globals and
-;;   have not been run on those platforms.
+;; - * Vercel Edge and Fastly Compute rows are unverified. Vercel's Edge
+;;   Runtime is not workerd, so js-runtime may be :unknown there rather than
+;;   :workerd. The :fastly platform check relies on a `fastly` global, which
+;;   newer versions of Fastly's JS runtime may no longer define.
+;; - Cloudflare Workers with the nodejs_compat flag (compatibility date
+;;   2025-09-15 or later) report js-runtime-has-node-apis? as true. The rest of
+;;   the row is the same.
+;; - Automated tests cover Node and jsdom in Node (dev and :advanced builds),
+;;   and Cloudflare Workers with and without nodejs_compat (:advanced build in
+;;   workerd, via Miniflare). The other rows follow from each platform's
+;;   documented globals and have not been run on those platforms.
 
 
 #?(:cljs
@@ -139,10 +147,11 @@
      ;; Cached global lookups (one-time at namespace load)
      ;; -------------------------------------------------------------------
 
-     (def ^:private ua    (gget "navigator" "userAgent"))
-     (def ^:private win   (gget "window"))
-     (def ^:private deno? (boolean (gget "Deno" "version" "deno")))
-     (def ^:private bun?  (boolean (gget "Bun")))
+     (def ^:private ua       (gget "navigator" "userAgent"))
+     (def ^:private win      (gget "window"))
+     (def ^:private deno?    (boolean (gget "Deno" "version" "deno")))
+     (def ^:private bun?     (boolean (gget "Bun")))
+     (def ^:private workerd? (= ua "Cloudflare-Workers"))
 
      ;; -------------------------------------------------------------------
      ;; Primitive capability flags
@@ -164,21 +173,23 @@
      (def js-runtime-has-node-apis?
        "Resolves to `true` when Node's `process.versions.node` is present.
         Includes Node itself, Deno 2+ (Node compat mode), Bun, Electron
-        (both processes), and jsdom (which runs in Node). Use when you need to
-        gate on access to Node APIs like `fs`, `path`, `process.env`, or native
-        modules. Note: this is true under jsdom, so pair with
-         `(not js-runtime-has-dom?)` if you want to exclude test envs. For a
-        strict Node-only check, use `(= js-runtime :node)`."
+        (both processes), jsdom (which runs in Node), and Cloudflare Workers
+        with the nodejs_compat flag (compatibility date 2025-09-15 or later).
+        Use when you need to check for access to Node APIs like `fs`, `path`,
+        `process.env`, or native modules. Note: this is true under jsdom, so
+        pair with `(not js-runtime-has-dom?)` if you want to exclude test
+        envs. For a strict Node-only check, use `(= js-runtime :node)`."
        (boolean (gget "process" "versions" "node")))
 
      (def js-runtime-is-strict-node?
-       "True only in actual Node.js. Excludes Bun and Deno even when they're
-        running in Node compatibility mode. Checks that process.release.name
-        is \"node\", which Deno's Node compat layer also reports, so Deno and
-        Bun are excluded explicitly."
+       "True only in actual Node.js. Excludes Bun, Deno and Cloudflare Workers
+        even when they run in Node compatibility mode. Checks that
+        process.release.name is \"node\", which Deno and Cloudflare's
+        nodejs_compat also report, so those runtimes are excluded explicitly."
        (and (= (gget "process" "release" "name") "node")
             (not deno?)
-            (not bun?)))
+            (not bun?)
+            (not workerd?)))
 
 
      (def js-runtime
@@ -206,7 +217,7 @@
         | Deno 2             | `:deno`              |
         | Bun                | `:bun`               |
         | Cloudflare Workers | `:workerd`           |
-        | Vercel Edge        | `:workerd`           |
+        | Vercel Edge*       | `:workerd`           |
         | Netlify Edge       | `:deno`              |
         | jsdom in Node      | `:node`              |
         | Electron renderer  | `:electron-renderer` |
@@ -214,6 +225,8 @@
         | React Native       | `:react-native`      |
         | Service Worker     | `:service-worker`    |
         | Web Worker         | `:web-worker`        |
+
+        * Unverified. On Vercel Edge this may be :unknown.
        "
        (or
         ;; Deno - must be checked b4 Node (Deno 2 shims process.versions.node)
@@ -222,8 +235,8 @@
         ;; Bun - must be checked b4 Node (Bun shims process.versions.node)
         (when bun? :bun)
 
-        ;; workerd (Cloudflare Workers runtime - also used by Vercel Edge)
-        (when (= ua "Cloudflare-Workers") :workerd)
+        ;; workerd (Cloudflare Workers runtime)
+        (when workerd? :workerd)
 
         ;; Service Worker
         (when (= (gget "self" "constructor" "name")
@@ -257,28 +270,30 @@
      (def js-platform
        "The deployment platform, independent of underlying runtime. One of:
         :netlify-edge  - Netlify Edge Functions (runs on Deno)
-        :vercel-edge   - Vercel Edge Functions (runs on workerd)
+        :vercel-edge   - Vercel Edge Functions
         :cloudflare    - Cloudflare Workers (runs on workerd)
-        :fastly        - Fastly Compute@Edge
+        :fastly        - Fastly Compute
         nil            - no specific platform detected
 
         Platforms are distinct from runtimes because they layer
         platform-specific APIs (KV stores, env vars, request contexts) on
-        top of the same runtime. Multiple platforms can share a runtime:
-        both Vercel Edge and Cloudflare Workers run on workerd.
+        top of the same runtime. A platform can share a runtime with other
+        environments: Netlify Edge runs on Deno.
 
         | Environment        | Value           |
         |:-------------------|:----------------|
         | Cloudflare Workers | `:cloudflare`   |
-        | Vercel Edge        | `:vercel-edge`  |
+        | Vercel Edge*       | `:vercel-edge`  |
         | Netlify Edge       | `:netlify-edge` |
-        | Fastly Compute     | `:fastly`       |
+        | Fastly Compute*    | `:fastly`       |
         | Everything else    | `nil`           |
+
+        * Unverified.
        "
        (cond
          (gget "Netlify")            :netlify-edge
          (gget "EdgeRuntime")        :vercel-edge
-         (= ua "Cloudflare-Workers") :cloudflare
+         workerd?                    :cloudflare
          (gget "fastly")             :fastly
          :else                       nil))
 
@@ -302,15 +317,17 @@
         | Deno 2             | `true`  |
         | Bun                | `true`  |
         | Cloudflare Workers | `true`  |
-        | Vercel Edge        | `true`  |
+        | Vercel Edge*       | `true`  |
         | Netlify Edge       | `true`  |
-        | Fastly Compute     | `true`  |
+        | Fastly Compute*    | `true`  |
         | jsdom in Node      | `true`  |
         | Electron renderer  | `true`  |
         | Electron main      | `true`  |
         | React Native       | `false` |
         | Web Worker         | `false` |
         | Service Worker     | `false` |
+
+        * Unverified.
         "
        (if (and js-runtime-has-dom? (not (gget "process")))
          false  ; fast path: real browser

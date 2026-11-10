@@ -1,0 +1,7 @@
+{
+  "name": "js-runtime-detection-dev",
+  "private": true,
+  "devDependencies": {
+    "miniflare": "^4.20260730.0"
+  }
+}

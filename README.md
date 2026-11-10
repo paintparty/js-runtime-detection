@@ -76,9 +76,9 @@ From a `.cljc` file, require it for the ClojureScript side only:
 | Bun                | `:bun`               | `nil`           |
 | jsdom in Bun       | `:bun`               | `nil`           |
 | Cloudflare Workers | `:workerd`           | `:cloudflare`   |
-| Vercel Edge        | `:workerd`           | `:vercel-edge`  |
+| Vercel Edge*       | `:workerd`           | `:vercel-edge`  |
 | Netlify Edge       | `:deno`              | `:netlify-edge` |
-| Fastly Compute     | `:unknown`           | `:fastly`       |
+| Fastly Compute*    | `:unknown`           | `:fastly`       |
 | Electron renderer  | `:electron-renderer` | `nil`           |
 | Electron main      | `:node`              | `nil`           |
 | React Native       | `:react-native`      | `nil`           |
@@ -95,9 +95,9 @@ From a `.cljc` file, require it for the ClojureScript side only:
 | Bun                | true                 | false      | false        | true             | false             |
 | jsdom in Bun       | true                 | true       | true         | true             | false             |
 | Cloudflare Workers | true                 | false      | false        | false            | false             |
-| Vercel Edge        | true                 | false      | false        | false            | false             |
+| Vercel Edge*       | true                 | false      | false        | false            | false             |
 | Netlify Edge       | true                 | false      | false        | false            | false             |
-| Fastly Compute     | true                 | false      | false        | false            | false             |
+| Fastly Compute*    | true                 | false      | false        | false            | false             |
 | Electron renderer  | true                 | true       | false        | true             | false             |
 | Electron main      | true                 | false      | false        | true             | true              |
 | React Native       | false                | false      | false        | false            | false             |
@@ -108,19 +108,26 @@ The `has-*` and `is-*` columns are short for `js-runtime-has-dom?`, `js-runtime-
 
 Under jsdom, `js-server-runtime?` and `js-runtime-has-node-apis?` are true, because jsdom runs on a server runtime. Pair them with `(not js-runtime-has-dom?)` to exclude test environments that simulate a browser.
 
+\* Rows marked with an asterisk are unverified. Vercel's Edge Runtime is not workerd, so on Vercel Edge `js-runtime` may be `:unknown` rather than `:workerd`. The `:fastly` platform check relies on a `fastly` global, which newer versions of Fastly's JavaScript runtime may no longer define.
+
 The Electron renderer rows assume `nodeIntegration` is enabled. With Electron's defaults (context isolation on, `nodeIntegration` off), the renderer has no `process` global and reports the same values as a real browser.
 
-Automated tests cover Node and jsdom in Node, in both dev and `:advanced` builds. The other rows follow from each platform's documented globals and have not been run on those platforms.
+Cloudflare Workers with the `nodejs_compat` flag (compatibility date 2025-09-15 or later) report `js-runtime-has-node-apis?` as true. The rest of the row is the same.
+
+Automated tests cover Node and jsdom in Node (dev and `:advanced` builds), and Cloudflare Workers with and without `nodejs_compat` (an `:advanced` build run in workerd through Miniflare). The other rows follow from each platform's documented globals and have not been run on those platforms.
 
 ## Development
 
+Run `npm install` once to get Miniflare, which `test:cloudflare` needs.
+
 ```sh
-bb test:node      # run the tests on Node (via nbb)
-bb test:advanced  # compile the tests with :advanced on the latest ClojureScript, run on Node plain and with jsdom globals
-bb test:compat    # same, on the oldest supported ClojureScript (1.9.946)
-bb test           # all three of the above
-bb ci             # run the tests and build the jar
-bb install        # install the jar to ~/.m2
+bb test:node       # run the tests on Node (via nbb)
+bb test:advanced   # compile the tests with :advanced on the latest ClojureScript, run on Node plain and with jsdom globals
+bb test:compat     # same, on the oldest supported ClojureScript (1.9.946)
+bb test:cloudflare # run a probe in workerd (Cloudflare Workers) via Miniflare, with and without nodejs_compat
+bb test            # all four of the above
+bb ci              # run the tests and build the jar
+bb install         # install the jar to ~/.m2
 ```
 
 ### How the tests are set up
@@ -135,6 +142,7 @@ bb install        # install the jar to ~/.m2
 - There are two test entrypoints:
   - [runner.cljs](test/js_runtime_detection/runner.cljs) is for nbb.
   - [advanced_runner.cljs](test/js_runtime_detection/advanced_runner.cljs) is for the compiled builds. It calls `(enable-console-print!)`, which ClojureScript 1.9 needs on Node and which nbb doesn't have.
+- `test:cloudflare` builds [worker_probe.cljs](test/js_runtime_detection/worker_probe.cljs) with `:advanced` and no `:target`. [test/cloudflare/run.mjs](test/cloudflare/run.mjs) appends a `fetch` handler to the compiled file, loads it into workerd through Miniflare, and compares the returned values against the Cloudflare Workers row. It runs once without flags and once with `nodejs_compat`, with the compatibility date pinned to 2026-07-01.
 - A failing test sets the process exit code to 1, so `bb test` and `bb ci` stop.
 
 ## License
