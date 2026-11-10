@@ -1,10 +1,10 @@
 # js-runtime-detection
 
-A ClojureScript library that detects which JavaScript runtime and deployment platform your code is running in (browser, Node, Deno, Bun, worker, etc.).
+A ClojureScript library that detects JS runtime and deployment platform (browser, Node, Deno, Bun, worker, etc.).
 
 Detection works by reading properties of `globalThis`. The library has no dependencies and does not import Node.js built-in modules like `fs` or `os`, which don't exist in browsers or edge runtimes. A missing global gives `nil` instead of an error, so the library loads in any JS environment. Every value is computed once, when `js-runtime-detection.core` loads. If your test setup installs jsdom, load `js-runtime-detection.core` after jsdom is in place.
 
-Properties are read by string key, for example `globalThis["process"]["versions"]["node"]` rather than `globalThis.process.versions.node`. The Closure compiler renames dotted property names in `:advanced` builds but never changes string keys, so results are the same in dev builds and `:advanced` builds.
+Properties are read by string key, for example `globalThis["process"]["versions"]["node"]` rather than `globalThis.process.versions.node`. The ClojureScript (Closure compiler) renames dotted property names in `:advanced` builds but never changes string keys, so results are the same in dev builds and `:advanced` builds.
 
 Detection only looks at which globals exist and what they contain, such as `globalThis.Deno` or `navigator.userAgent`. Other JS code running in the same environment, such as a dependency, a polyfill or a test setup, can add or change those globals. For example, a polyfill can define a `process` global in a browser, and jsdom adds `window` and `document` to Node.
 
@@ -15,7 +15,7 @@ Use `js-runtime`, `js-platform` and the other defs to decide how your program be
 ## Requirements
 
 - ClojureScript 1.9.946 or newer. Tested with `:advanced` builds on 1.9.946 and on 1.10.238 through 1.12.145. ClojureScript 1.7 does not work, because it has no `unchecked-get`.
-- A JavaScript engine with `globalThis` (Node 12+, browsers from 2019 on). Without it, every value is `nil`, `false` or `:unknown`.
+- A JS engine with `globalThis` (Node 12+, browsers from 2019 on). Without it, every value is `nil`, `false` or `:unknown`.
 
 <br>
 
@@ -116,9 +116,9 @@ The value of **`js-platform`** is one of:
 | Service Worker     | `:service-worker`    | `nil`           | `false`              | `false`               | `false`                 | `false`                     | `false`                      |
 | Web Worker         | `:web-worker`        | `nil`           | `false`              | `false`               | `false`                 | `false`                     | `false`                      |
 
-Under jsdom, `js-server-runtime?` and `js-runtime-has-node-apis?` are true, because jsdom runs on a server runtime. Pair them with `(not js-runtime-has-dom?)` to exclude test environments that simulate a browser.
+\* Rows marked with an asterisk are unverified. Vercel's Edge Runtime is not workerd, so on Vercel Edge `js-runtime` may be `:unknown` rather than `:workerd`. The `:fastly` platform check relies on a `fastly` global, which newer versions of Fastly's JS runtime may no longer define.
 
-\* Rows marked with an asterisk are unverified. Vercel's Edge Runtime is not workerd, so on Vercel Edge `js-runtime` may be `:unknown` rather than `:workerd`. The `:fastly` platform check relies on a `fastly` global, which newer versions of Fastly's JavaScript runtime may no longer define.
+Under jsdom, `js-server-runtime?` and `js-runtime-has-node-apis?` are true, because jsdom runs on a server runtime. Pair them with `(not js-runtime-has-dom?)` to exclude test environments that simulate a browser.
 
 The Electron renderer row assumes `nodeIntegration` is enabled. With Electron's defaults (context isolation on, `nodeIntegration` off), the renderer has no `process` global and reports the same values as a real browser.
 
@@ -130,7 +130,7 @@ Automated tests cover Node and jsdom in Node (dev and `:advanced` builds), and C
 
 ## Development
 
-The library has no dependencies, and the repo has no `package.json`. The Cloudflare test is optional. It needs Miniflare, which you can install into a gitignored folder with:
+The library has zero dependencies, and no `package.json`. The Cloudflare test is optional. It needs Miniflare, which you can install into a gitignored folder with:
 
 ```sh
 npm install --no-save --prefix test/cloudflare miniflare@4.20260730.0
@@ -148,19 +148,26 @@ bb ci              # run the tests and build the jar
 bb install         # install the jar to ~/.m2
 ```
 
-### How the tests are set up
+### How the tests work 
 
-- Each test run checks one row of the detection matrix. The `JS_RUNTIME_DETECT_ENV` environment variable picks the row: `node` (the default) or `jsdom-node`.
-- `test:advanced` and `test:compat` compile the tests with `:advanced` optimizations, then run them on Node twice. The first run is plain. The second preloads [test/stubs/jsdom.cjs](test/stubs/jsdom.cjs), which sets the `window`, `document` and jsdom user agent globals that global-jsdom and jest-environment-jsdom install.
+- Each test run checks one row of the detection matrix. The `JS_RUNTIME_DETECT_ENV` env var determines the row: `node` (the default) or `jsdom-node`.
+
+- `test:advanced` and `test:compat` compile the tests with `:advanced` optimizations, then run them twice on Node. The first run is no-frills, and the second preloads [test/stubs/jsdom.cjs](test/stubs/jsdom.cjs), which sets the `window`, `document` and jsdom user agent globals that global-jsdom and jest-environment-jsdom install.
+
 - The `:advanced` runs catch property renaming by the Closure compiler, which dev builds and nbb don't show.
+
 - Both tasks use the same build script, [script/build_advanced.clj](script/build_advanced.clj). It calls `cljs.build.api` rather than `cljs.main`, because ClojureScript 1.9.946 predates `cljs.main`.
+
 - `deps.edn` has one alias per ClojureScript version:
   - `:cljs-latest` uses ClojureScript 1.12.145.
   - `:cljs-1.9` uses ClojureScript 1.9.946. It forces Clojure 1.9.0 and adds the `jaxb-api` jar, which the ClojureScript 1.9.946 compiler needs to run on Java 11 or newer.
+
 - There are two test entrypoints:
   - [runner.cljs](test/js_runtime_detection/runner.cljs) is for nbb.
   - [advanced_runner.cljs](test/js_runtime_detection/advanced_runner.cljs) is for the compiled builds. It calls `(enable-console-print!)`, which ClojureScript 1.9 needs on Node and which nbb doesn't have.
-- `test:cloudflare` builds [worker_probe.cljs](test/js_runtime_detection/worker_probe.cljs) with `:advanced` and no `:target`. [test/cloudflare/run.mjs](test/cloudflare/run.mjs) appends a `fetch` handler to the compiled file, loads it into workerd through Miniflare, and compares the returned values against the Cloudflare Workers row. It runs once without flags and once with `nodejs_compat`, with the compatibility date pinned to 2026-07-01.
+
+- `test:cloudflare` builds [worker_probe.cljs](test/js_runtime_detection/worker_probe.cljs) with `:advanced` and no `:target`. [test/cloudflare/run.mjs](test/cloudflare/run.mjs) appends a `fetch` handler to the compiled file, loads it into workerd through Miniflare, and compares the returned values against the Cloudflare Workers row. It runs once without flags and once with `nodejs_compat`, with the compatibility date pinned to 2026-07-01. The test is optional: it runs only when Miniflare is installed in the gitignored `test/cloudflare/node_modules` folder (see [Development](#development) for the install command), and prints SKIPPED otherwise.
+
 - A failing test sets the process exit code to 1, so `bb test` and `bb ci` stop.
 
 <br>
