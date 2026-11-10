@@ -130,13 +130,7 @@ Automated tests cover Node and jsdom in Node (dev and `:advanced` builds), and C
 
 ## Development
 
-The library has zero dependencies, and no `package.json`. The Cloudflare test is optional. It needs Miniflare, which you can install into a gitignored folder with:
-
-```sh
-npm install --no-save --prefix test/cloudflare miniflare@4.20260730.0
-```
-
-This creates only `test/cloudflare/node_modules`. Without it, `bb test:cloudflare` prints SKIPPED and `bb test` continues.
+The library has zero dependencies, and no `package.json`.
 
 ```sh
 bb test:node       # run the tests on Node (via nbb)
@@ -166,9 +160,19 @@ bb install         # install the jar to ~/.m2
   - [runner.cljs](test/js_runtime_detection/runner.cljs) is for nbb.
   - [advanced_runner.cljs](test/js_runtime_detection/advanced_runner.cljs) is for the compiled builds. It calls `(enable-console-print!)`, which ClojureScript 1.9 needs on Node and which nbb doesn't have.
 
-- `test:cloudflare` builds [worker_probe.cljs](test/js_runtime_detection/worker_probe.cljs) with `:advanced` and no `:target`. [test/cloudflare/run.mjs](test/cloudflare/run.mjs) appends a `fetch` handler to the compiled file, loads it into workerd through Miniflare, and compares the returned values against the Cloudflare Workers row. It runs once without flags and once with `nodejs_compat`, with the compatibility date pinned to 2026-07-01. The test is optional: it runs only when Miniflare is installed in the gitignored `test/cloudflare/node_modules` folder (see [Development](#development) for the install command), and prints SKIPPED otherwise.
-
 - A failing test sets the process exit code to 1, so `bb test` and `bb ci` stop.
+
+### Optional Cloudflare tests
+
+`bb test:cloudflare` runs the library in workerd, the runtime behind Cloudflare Workers. It needs Miniflare, which you can install into a gitignored folder with:
+
+```sh
+npm install --no-save --prefix test/cloudflare miniflare@4.20260730.0
+```
+
+This creates only `test/cloudflare/node_modules`. Without it, `bb test:cloudflare` prints SKIPPED and `bb test` continues.
+
+The task builds [worker_probe.cljs](test/js_runtime_detection/worker_probe.cljs) with `:advanced` and no `:target`. [test/cloudflare/run.mjs](test/cloudflare/run.mjs) appends a `fetch` handler to the compiled file, loads it into workerd through Miniflare, and compares the returned values against the Cloudflare Workers row. It runs once without flags and once with `nodejs_compat`, with the compatibility date pinned to 2026-07-01.
 
 <br>
 
