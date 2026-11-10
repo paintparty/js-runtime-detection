@@ -13,6 +13,10 @@
                 :extra-deps    {org.clojure/clojurescript {:mvn/version "1.9.854"}
                                 javax.xml.bind/jaxb-api   {:mvn/version "2.3.1"}}
                 :override-deps {org.clojure/clojure {:mvn/version "1.8.0"}}}
+  ;; Clojurific, used by `bb test:clojurific`. It replaces ClojureScript, which
+  ;; is fine here because nothing on this classpath brings ClojureScript in.
+  :clojurific  {:extra-paths ["test"]
+                :extra-deps  {com.whimsical/clojurific {:mvn/version "0.12.15"}}}
   :build       {:deps       {io.github.clojure/tools.build {:mvn/version "0.10.14"}
                              slipset/deps-deploy           {:mvn/version "0.2.5"}}
                 :ns-default build}}}

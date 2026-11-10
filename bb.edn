@@ -1,22 +1,64 @@
 {:tasks
  {:init
-  (defn run-advanced
-    "Compiles the tests with :advanced using the ClojureScript from `alias`,
-     then runs them on Node three times: plain, with jsdom globals stubbed in,
-     and with globalThis deleted."
-    [alias out-dir]
-    (let [test-js (str out-dir "/main.js")]
+  (do
+    (defn run-node-rows
+      "Runs a compiled test entrypoint on Node: plain, with jsdom globals
+       stubbed in and, unless `no-globalthis?` is false, with globalThis
+       deleted. Cherry and Clojurific skip the last run, because their own
+       runtimes need globalThis."
+      ([test-js] (run-node-rows test-js true))
+      ([test-js no-globalthis?]
+       (shell "node" test-js)
+       (shell {:extra-env {"JS_RUNTIME_DETECT_ENV" "jsdom-node"}}
+              "node" "-r" "./test/stubs/jsdom.cjs" test-js)
+       (when no-globalthis?
+         (shell "node" "-r" "./test/stubs/no-globalthis.cjs" test-js))))
+
+    (defn run-advanced
+      "Compiles the tests with :advanced using the ClojureScript from `alias`,
+       then runs them on Node."
+      [alias out-dir]
       (clojure (str "-M:" alias) "script/build_advanced.clj" out-dir)
-      (shell "node" test-js)
-      (shell {:extra-env {"JS_RUNTIME_DETECT_ENV" "jsdom-node"}}
-             "node" "-r" "./test/stubs/jsdom.cjs" test-js)
-      (shell "node" "-r" "./test/stubs/no-globalthis.cjs" test-js)))
+      (run-node-rows (str out-dir "/main.js")))
+
+    (defn run-esm-dialect
+      "Compiles src and test with the Squint or Cherry CLI from npm `pkg`
+       (name@version), installs the same package next to the output for the
+       runtime the compiled modules import, then runs the tests on Node."
+      [pkg out-dir no-globalthis?]
+      (shell "npx" "--yes" pkg "compile" "--paths" "src" "--paths" "test" "--output-dir" out-dir)
+      (shell "npm" "install" "--no-save" "--no-package-lock" "--silent" "--prefix" out-dir pkg)
+      (run-node-rows (str out-dir "/js_runtime_detection/runner.mjs") no-globalthis?)))
 
   ;; Test
   ;; ---------------------------------------------------------------------------
   test
-  {:doc  "Run the test suite on Node under nbb. Requires Node.js and npx (fetches nbb on first run)."
-   :task (shell "npx" "--yes" "nbb" "-cp" "src:test" "test/js_runtime_detection/runner.cljs")}
+  {:doc  "Run the test suite on Node under nbb. Same as test:nbb."
+   :depends [test:nbb]}
+
+  test:nbb
+  {:doc  "Run the test suite on Node under nbb, plain and with jsdom globals. Requires Node.js and npx (fetches nbb on first run)."
+   :task (let [args ["npx" "--yes" "nbb@1.6.214" "-cp" "src:test" "test/js_runtime_detection/runner.cljs"]]
+           (apply shell args)
+           (apply shell {:extra-env {"JS_RUNTIME_DETECT_ENV" "jsdom-node"
+                                     "NODE_OPTIONS"          "-r ./test/stubs/jsdom.cjs"}}
+                  args))}
+
+  test:squint
+  {:doc  "Compile the tests with Squint and run them on Node: plain, with jsdom globals, and without globalThis. Requires Node.js and npx."
+   :task (run-esm-dialect "squint-cljs@0.15.212" "target/squint" true)}
+
+  test:cherry
+  {:doc  "Compile the tests with Cherry and run them on Node: plain and with jsdom globals. Requires Node.js and npx."
+   :task (run-esm-dialect "cherry-cljs@0.6.38" "target/cherry" false)}
+
+  test:clojurific
+  {:doc  "Compile the tests with Clojurific and run them on Node: plain and with jsdom globals. Requires Java 17 or newer."
+   :task (do (clojure "-M:clojurific" "-m" "cljf.esm" "build"
+                      (str "{:test-runner {:ns js-runtime-detection.clojurific-runner"
+                           " :ns-regexp \"-test$\" :runner cljf.esm.node-test/run}"
+                           " :output-dir \"target/clojurific\"}"))
+             (run-node-rows "target/clojurific/js_runtime_detection/clojurific_runner.js" false))}
 
   test:advanced
   {:doc  "Compile the tests with :advanced on the latest ClojureScript and run them on Node: plain, with jsdom globals, and without globalThis. Catches property renaming that dev builds don't show."
@@ -37,8 +79,8 @@
                              "  npm install --no-save --prefix test/cloudflare miniflare@4.20260730.0")))}
 
   test:all
-  {:doc     "Run test, test:advanced, test:compat and test:cloudflare."
-   :depends [test test:advanced test:compat test:cloudflare]}
+  {:doc     "Run every test task. test:cloudflare skips if Miniflare is not installed."
+   :depends [test:nbb test:advanced test:compat test:cloudflare test:squint test:cherry test:clojurific]}
 
   ;; Build
   ;; ---------------------------------------------------------------------------

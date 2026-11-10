@@ -7,7 +7,7 @@
 (def class-dir "target/classes")
 
 (defn- pom-template [version]
-  [[:description "JavaScript runtime and platform detection for ClojureScript"]
+  [[:description "JavaScript runtime and platform detection for ClojureScript, nbb, Cherry, Clojurific and Squint"]
    [:url "https://github.com/paintparty/js-runtime-detection"]
    [:licenses
     [:license

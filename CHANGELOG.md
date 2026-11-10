@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Added
+- Tested support for nbb, Cherry, Clojurific and Squint, alongside ClojureScript. New tasks `bb test:nbb`, `bb test:squint`, `bb test:cherry` and `bb test:clojurific` run the test suite in each on Node, plain and with jsdom globals, and are part of `bb test:all`.
+- README setup for each dialect, and a note on Squint, where `js-runtime` and `js-platform` are strings.
+
 ## [0.1.0] - 2026-11-09
 
 ### Added

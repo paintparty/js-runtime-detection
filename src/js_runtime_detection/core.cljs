@@ -5,6 +5,9 @@
    environment (browser, worker, edge, Node, Deno, Bun). Every value is computed
    once, when the namespace loads.
 
+   Works with ClojureScript, nbb, Cherry, Clojurific and Squint. In Squint,
+   keywords compile to strings, so `js-runtime` is `\"node\"` rather than `:node`.
+
    Public defs:
      `js-runtime`                - JS runtime (`:node`, `:deno`, ...)
      `js-platform`               - Deployment platform (`:cloudflare`, ...)

@@ -1,6 +1,9 @@
 # js-runtime-detection
 
-**A ClojureScript library that detects JS runtime details.**
+**Detects JS runtime details. Built for ClojureScript dialects.**  
+<sub>Works with ClojureScript, nbb, Cherry, Clojurific, and Squint</sub>
+
+<br>
 
 ```clojure
 (ns my.app
@@ -15,12 +18,25 @@ rt/js-runtime-is-server ;; => true
 
 ## Requirements
 
-- ClojureScript 1.9.854 or newer. Tested with `:advanced` builds on 1.9.854, 1.9.908, 1.9.946 and 1.10.238 through 1.12.145. Earlier versions do not work, because they have no `unchecked-get`.
-- Any JS engine. In engines without `globalThis` (Node before 12, IE11, Safari before 12.1), the library finds the global object through `self`, `window` or `global` instead.
+One of these dialects:
+
+| Dialect       | Tested versions                                        |
+|:--------------|:-------------------------------------------------------|
+| ClojureScript | 1.9.854 or newer                                       |
+| nbb           | 1.6.214                                                |
+| Cherry        | 0.6.38                                                 |
+| Clojurific    | 0.12.15                                                |
+| Squint        | 0.15.212                                               |
+
+ClojureScript is tested with `:advanced` builds on 1.9.854, 1.9.908, 1.9.946 and 1.10.238 through 1.12.145. Earlier versions do not work, because they have no `unchecked-get`.
+
+Any JS engine works. In engines without `globalThis` (Node before 12, IE11, Safari before 12.1), the library finds the global object through `self`, `window` or `global` instead. Cherry and Clojurific need `globalThis` for their own runtimes, so with those two dialects the engine needs it too.
 
 <br>
 
 ## Setup
+
+#### ClojureScript and Clojurific
 
 deps.edn:
 
@@ -34,7 +50,26 @@ Leiningen:
 [io.github.paintparty/js-runtime-detection "0.1.0"]
 ```
 
-To use it as a git dependency instead, see [Consuming js-runtime-detection as a git dependency](docs/git-deps.md).
+Clojurific replaces ClojureScript on the classpath. This library has no dependencies, so it brings no ClojureScript in and needs no `:exclusions`.
+
+#### nbb
+
+nbb.edn:
+
+```clojure
+{:deps {io.github.paintparty/js-runtime-detection {:mvn/version "0.1.0"}}}
+```
+
+#### Squint and Cherry
+
+Squint and Cherry read `:deps` from `squint.edn` or `cherry.edn`, and only take git and `:local/root` dependencies, not jars:
+
+```clojure
+{:paths ["src"]
+ :deps  {io.github.paintparty/js-runtime-detection {:git/tag "v0.1.0" :git/sha "..."}}}
+```
+
+[Consuming js-runtime-detection as a git dependency](docs/git-deps.md) has the SHA of the latest release and the other forms the coordinate map can take. The same git coordinates work in deps.edn and nbb.edn.
 
 <br>
 
@@ -63,7 +98,9 @@ rt/js-runtime-has-node-apis  ;; => false
 rt/js-runtime-is-strict-node ;; => false
 ```
 
-The library is ClojureScript only. From a `.cljc` file, require it inside a reader conditional:
+In Squint, keywords compile to strings, so `rt/js-runtime` is `"node"` and prints as `"node"`. Comparisons such as `(= rt/js-runtime :node)` and `(case rt/js-runtime :node ...)` still work, because `:node` is also `"node"` there.
+
+The library runs on JS only. From a `.cljc` file, require it inside a reader conditional:
 
 ```clojure
 (ns my.app
@@ -152,8 +189,8 @@ Cloudflare Workers with the `nodejs_compat` flag (compatibility date 2025-09-15 
 
 These rows of the detection matrix are checked by the automated tests (see [How the tests work](#how-the-tests-work)):
 
-- Node and jsdom in Node (dev and `:advanced` builds)
-- Node without `globalThis`
+- Node and jsdom in Node, in every dialect: ClojureScript (`:advanced` builds), nbb, Cherry, Clojurific and Squint
+- Node without `globalThis`, in ClojureScript and Squint
 - Cloudflare Workers with and without `nodejs_compat` (an `:advanced` build run in workerd through Miniflare)
 
 The other rows in the detection matrix above follow from each platform's documented globals and have not been run on those platforms.
@@ -177,11 +214,15 @@ Use `js-runtime`, `js-platform` and the other defs to decide how your program be
 The library has zero dependencies, and no `package.json`.
 
 ```sh
-bb test            # run the tests on Node (via nbb)
+bb test            # same as test:nbb
+bb test:nbb        # run the tests on Node under nbb, plain and with jsdom globals
 bb test:advanced   # compile the tests with :advanced on the latest ClojureScript, run on Node plain and with jsdom globals
 bb test:compat     # same, on the oldest supported ClojureScript (1.9.854)
 bb test:cloudflare # optional: run a probe in workerd (Cloudflare Workers) via Miniflare, with and without nodejs_compat
-bb test:all        # all four of the above (test:cloudflare skips if Miniflare is not installed)
+bb test:squint     # compile the tests with Squint, run on Node
+bb test:cherry     # compile the tests with Cherry, run on Node
+bb test:clojurific # compile the tests with Clojurific, run on Node (needs Java 17 or newer)
+bb test:all        # all of the above (test:cloudflare skips if Miniflare is not installed)
 bb ci              # run the tests and build the jar
 bb install         # install the jar to ~/.m2
 bb docs:readme     # after tagging a release: update the version numbers in this README
@@ -196,15 +237,21 @@ bb docs:git-deps   # after tagging a release: regenerate docs/git-deps.md
 
 - The `:advanced` runs catch property renaming by the Closure compiler, which dev builds and nbb don't show.
 
+- `test:nbb` runs the tests twice under nbb, the second time with the jsdom stub preloaded through `NODE_OPTIONS`.
+
+- `test:squint` and `test:cherry` compile `src` and `test` to ES modules in `target/squint` and `target/cherry`, then install the compiler's npm package into that folder, because the compiled modules import its runtime. Squint runs all three rows. Cherry skips the run without `globalThis`, because Cherry's runtime needs it.
+
+- `test:clojurific` compiles with the `:clojurific` alias in `deps.edn` and Clojurific's generated test runner (`cljf.esm.node-test/run`), then runs it on Node. Like Cherry, it skips the run without `globalThis`.
+
 - Both tasks use the same build script, [script/build_advanced.clj](script/build_advanced.clj). It calls `cljs.build.api` rather than `cljs.main`, because ClojureScript 1.9.854 predates `cljs.main`.
 
 - `deps.edn` has one alias per ClojureScript version:
   - `:cljs-latest` uses ClojureScript 1.12.145.
   - `:cljs-1.9` uses ClojureScript 1.9.854. It forces Clojure 1.8.0, because under Clojure 1.9 that compiler writes `##Inf` into its output, which the Closure compiler can't parse. It also adds the `jaxb-api` jar, which the ClojureScript 1.9.854 compiler needs to run on Java 11 or newer.
 
-- There are two test entrypoints:
-  - [runner.cljs](test/js_runtime_detection/runner.cljs) is for nbb.
-  - [advanced_runner.cljs](test/js_runtime_detection/advanced_runner.cljs) is for the compiled builds. It calls `(enable-console-print!)`, which ClojureScript 1.9 needs on Node and which nbb doesn't have.
+- There are two test entrypoints, plus the one Clojurific generates:
+  - [runner.cljs](test/js_runtime_detection/runner.cljs) is for nbb, Squint and Cherry. nbb reports the summary through `cljs.test`'s `:end-run-tests` report method, while Squint and Cherry return it from `run-tests`, so the runner reads both.
+  - [advanced_runner.cljs](test/js_runtime_detection/advanced_runner.cljs) is for the ClojureScript builds. It calls `(enable-console-print!)`, which ClojureScript 1.9 needs on Node and which nbb doesn't have.
 
 - A failing test sets the process exit code to 1, so `bb test:all` and `bb ci` stop.
 
