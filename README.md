@@ -24,6 +24,11 @@ Leiningen:
 [io.github.paintparty/js-runtime-detection "0.1.0"]
 ```
 
+## Requirements
+
+- ClojureScript 1.9.946 or newer. Tested with `:advanced` builds on 1.9.946 and on 1.10.238 through 1.12.145. ClojureScript 1.7 does not work, because it has no `unchecked-get`.
+- A JavaScript engine with `globalThis` (Node 12+, browsers from 2019 on). Without it, every value is `nil`, `false` or `:unknown`.
+
 ## Usage
 
 ```clojure
