@@ -2,7 +2,11 @@
 
 Tells ClojureScript code which JavaScript runtime and deployment platform it is running in: Node, Deno, Bun, a browser, a web or service worker, Electron, React Native, Cloudflare Workers, Vercel Edge, Netlify Edge or Fastly Compute.
 
-Detection works by reading properties of `globalThis`. The namespace imports no Node modules, so it loads in any JS environment. Every value is computed once, when the namespace loads.
+Detection works by reading properties of `globalThis`. The namespace imports no Node modules, so it loads in any JS environment. Every value is computed once, when the namespace loads. If your test setup installs jsdom, load this namespace after jsdom is in place.
+
+Properties are read by string key, so results are the same in dev builds and `:advanced` builds.
+
+Any script can define these globals, so don't use these values for security decisions.
 
 The namespace is `.cljc`, so you can require it from shared code, but the defs only exist on the ClojureScript side.
 
@@ -99,12 +103,18 @@ The `has-*` and `is-*` columns are short for `js-runtime-has-dom?`, `js-runtime-
 
 Under jsdom, `js-server-runtime?` and `js-runtime-has-node-apis?` are true, because jsdom runs on a server runtime. Pair them with `(not js-runtime-has-dom?)` to exclude test environments that simulate a browser.
 
+The Electron renderer rows assume `nodeIntegration` is enabled. With Electron's defaults (context isolation on, `nodeIntegration` off), the renderer has no `process` global and reports the same values as a real browser.
+
+Automated tests cover Node and jsdom in Node, in both dev and `:advanced` builds. The other rows follow from each platform's documented globals and have not been run on those platforms.
+
 ## Development
 
 ```sh
-bb test:node   # run the tests on Node (via nbb)
-bb ci          # run the tests and build the jar
-bb install     # install the jar to ~/.m2
+bb test:node      # run the tests on Node (via nbb)
+bb test:advanced  # compile the tests with :advanced and run them on Node, plain and with jsdom globals
+bb test           # both of the above
+bb ci             # run the tests and build the jar
+bb install        # install the jar to ~/.m2
 ```
 
 ## License

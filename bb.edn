@@ -1,15 +1,28 @@
 {:tasks
- {test:node {:doc  "Run the test suite on Node under nbb. Requires Node.js and npx (fetches nbb on first run)."
-             :task (shell "npx" "--yes" "nbb" "-cp" "src:test" "test/js_runtime_detection/runner.cljs")}
+ {test:node     {:doc  "Run the test suite on Node under nbb. Requires Node.js and npx (fetches nbb on first run)."
+                 :task (shell "npx" "--yes" "nbb" "-cp" "src:test" "test/js_runtime_detection/runner.cljs")}
 
-  ci        {:doc     "Run the tests and build the JAR."
-             :depends [test:node]
-             :task    (clojure "-T:build" "jar")}
+  test:advanced {:doc  "Compile the test suite with :advanced optimizations and run it on Node, then again with jsdom globals stubbed in. Catches property renaming that dev builds don't show."
+                 :task (do (clojure "-M:cljs-advanced" "-m" "cljs.main"
+                                    "-co" "{:checked-arrays :warn}"
+                                    "-t" "node" "-O" "advanced"
+                                    "-d" "target/cljs-advanced" "-o" "target/cljs-advanced/test.js"
+                                    "-c" "js-runtime-detection.runner")
+                           (shell "node" "target/cljs-advanced/test.js")
+                           (shell {:extra-env {"JRD_ENV" "jsdom-node"}}
+                                  "node" "-r" "./test/stubs/jsdom.cjs" "target/cljs-advanced/test.js"))}
 
-  install   {:doc     "Install the JAR locally (build via ci)."
-             :depends [ci]
-             :task    (clojure "-T:build" "install")}
+  test          {:doc     "Run test:node and test:advanced."
+                 :depends [test:node test:advanced]}
 
-  ci:deploy {:doc     "Run the CI pipeline and deploy the JAR to Clojars."
-             :depends [ci]
-             :task    (clojure "-T:build" "deploy")}}}
+  ci            {:doc     "Run the tests and build the JAR."
+                 :depends [test]
+                 :task    (clojure "-T:build" "jar")}
+
+  install       {:doc     "Install the JAR locally (build via ci)."
+                 :depends [ci]
+                 :task    (clojure "-T:build" "install")}
+
+  ci:deploy     {:doc     "Run the CI pipeline and deploy the JAR to Clojars."
+                 :depends [ci]
+                 :task    (clojure "-T:build" "deploy")}}}

@@ -1,6 +1,9 @@
 {:paths ["src"]
  :deps  {org.clojure/clojure {:mvn/version "1.12.5"}}
  :aliases
- {:build {:deps       {io.github.clojure/tools.build {:mvn/version "0.10.14"}
-                       slipset/deps-deploy           {:mvn/version "0.2.5"}}
-          :ns-default build}}}
+ {;; Standard ClojureScript compiler, used by `bb test:advanced`
+  :cljs-advanced {:extra-paths ["test"]
+                  :extra-deps  {org.clojure/clojurescript {:mvn/version "1.12.145"}}}
+  :build         {:deps       {io.github.clojure/tools.build {:mvn/version "0.10.14"}
+                               slipset/deps-deploy           {:mvn/version "0.2.5"}}
+                  :ns-default build}}}

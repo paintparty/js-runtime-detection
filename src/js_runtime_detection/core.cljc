@@ -1,8 +1,9 @@
 (ns js-runtime-detection.core
   "JavaScript runtime and platform detection via globalThis sniffing.
 
-   Does not use any Node.js module imports — safe to load in any JS environment
-   (browser, worker, edge, Node, Deno, Bun).
+   Does not import any Node.js modules, so it is safe to load in any JS
+   environment (browser, worker, edge, Node, Deno, Bun). Every value is
+   computed once, when the namespace loads.
 
    Public defs:
      js-runtime                 - which JS runtime (:node, :browser, :deno, :bun, etc.)
@@ -104,26 +105,44 @@
 ;; └────────────────────┴────────────────────┴─────────────────────┴───────────────────────┴───────────────────────────┴──────────────────────────────┘
 
 
+;; NOTES on the matrices:
+;; - Electron renderer rows assume `nodeIntegration` is enabled. With
+;;   Electron's defaults (contextIsolation on, nodeIntegration off) the
+;;   renderer has no `process` global and reports the same values as a real
+;;   browser.
+;; - Automated tests cover Node and jsdom in Node, in both dev and :advanced
+;;   builds. The other rows follow from each platform's documented globals and
+;;   have not been run on those platforms.
+
+
 #?(:cljs
    (do
      (def ^:private global-ref
        (when (exists? js/globalThis) js/globalThis))
 
      (defn- gget
-       "Safely reads a property from globalThis."
-       [prop]
-       (when global-ref
-         (aget global-ref prop)))
+       "Reads a property path from globalThis by string keys, e.g.
+        (gget \"process\" \"versions\" \"node\"). Returns nil when any step
+        is missing.
+
+        Reading through globalThis means an undeclared global (Deno in Node,
+        process in a browser) returns nil instead of throwing a
+        ReferenceError. String keys are not renamed by :advanced compilation,
+        and unchecked-get does not trigger :checked-arrays warnings the way
+        aget does."
+       [& ks]
+       (reduce (fn [o k] (if (some? o) (unchecked-get o k) (reduced nil)))
+               global-ref
+               ks))
 
      ;; -------------------------------------------------------------------
      ;; Cached global lookups (one-time at namespace load)
      ;; -------------------------------------------------------------------
 
-     (def ^:private nav      (gget "navigator"))
-     (def ^:private ua       (some-> nav .-userAgent))
-     (def ^:private proc     (gget "process"))
-     (def ^:private self-ref (gget "self"))
-     (def ^:private win      (gget "window"))
+     (def ^:private ua    (gget "navigator" "userAgent"))
+     (def ^:private win   (gget "window"))
+     (def ^:private deno? (boolean (gget "Deno" "version" "deno")))
+     (def ^:private bun?  (boolean (gget "Bun")))
 
      ;; -------------------------------------------------------------------
      ;; Primitive capability flags
@@ -150,13 +169,16 @@
         modules. Note: this is true under jsdom, so pair with
          `(not js-runtime-has-dom?)` if you want to exclude test envs. For a
         strict Node-only check, use `(= js-runtime :node)`."
-       (boolean (some-> proc .-versions .-node)))
+       (boolean (gget "process" "versions" "node")))
 
      (def js-runtime-is-strict-node?
        "True only in actual Node.js. Excludes Bun and Deno even when they're
-        running in Node compatibility mode. Uses process.release.name, which
-        Deno and Bun don't fake."
-       (= (some-> proc .-release .-name) "node"))
+        running in Node compatibility mode. Checks that process.release.name
+        is \"node\", which Deno's Node compat layer also reports, so Deno and
+        Bun are excluded explicitly."
+       (and (= (gget "process" "release" "name") "node")
+            (not deno?)
+            (not bun?)))
 
 
      (def js-runtime
@@ -173,8 +195,9 @@
         :react-native
         :unknown
 
-        Uses `process.release.name` for the :node branch, which Deno and Bun
-        don't fake, ensuring strict Node detection.
+        The :node branch uses `js-runtime-is-strict-node?`, so Deno and Bun
+        in Node compatibility mode are not reported as :node. jsdom reports
+        the runtime it runs on, not :browser.
 
         | Environment        | Value                |
         |:-------------------|:---------------------|
@@ -194,17 +217,16 @@
        "
        (or
         ;; Deno - must be checked b4 Node (Deno 2 shims process.versions.node)
-        (when-let [deno (gget "Deno")]
-          (when (some-> deno .-version .-deno) :deno))
+        (when deno? :deno)
 
         ;; Bun - must be checked b4 Node (Bun shims process.versions.node)
-        (when (gget "Bun") :bun)
+        (when bun? :bun)
 
         ;; workerd (Cloudflare Workers runtime - also used by Vercel Edge)
         (when (= ua "Cloudflare-Workers") :workerd)
 
         ;; Service Worker
-        (when (= (some-> self-ref .-constructor .-name)
+        (when (= (gget "self" "constructor" "name")
                  "ServiceWorkerGlobalScope")
           :service-worker)
 
@@ -213,16 +235,17 @@
           :web-worker)
 
         ;; Electron renderer (has both window and process)
-        (when (and win (some-> proc .-versions .-electron))
+        (when (and win (gget "process" "versions" "electron"))
           :electron-renderer)
 
-        ;; Browser
-        (when (and win (gget "document"))
+        ;; Browser - jsdom also defines window and document, so it is skipped
+        ;; here and falls through to the runtime it runs on
+        (when (and js-runtime-has-dom? (not js-runtime-has-jsdom?))
           :browser)
 
         ;; React Native
         (when (or (gget "HermesInternal")
-                  (some-> nav .-product (= "ReactNative")))
+                  (= (gget "navigator" "product") "ReactNative"))
           :react-native)
 
         ;; Strict Node - uses process.release.name, which Deno/Bun don't fake
@@ -289,7 +312,7 @@
         | Web Worker         | `false` |
         | Service Worker     | `false` |
         "
-       (if (and win (gget "document") (not proc))
+       (if (and js-runtime-has-dom? (not (gget "process")))
          false  ; fast path: real browser
          (or (some? js-platform)
              js-runtime-has-node-apis?)))))
