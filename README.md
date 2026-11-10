@@ -20,7 +20,16 @@ Properties are read by string key, for example `globalThis["process"]["versions"
 
 Detection only looks at which globals exist and what they contain, such as `globalThis.Deno` or `navigator.userAgent`. Any other JavaScript running in the same environment can add or change those globals: a dependency, a polyfill, or a test setup like jsdom, which adds `window` and `document` to Node. Use the results to pick behavior, such as how to print output or which APIs to call, not as proof of where your code is running. For example, don't rely on `js-server-runtime?` to decide whether it's safe to read secrets or skip an authorization check.
 
-## Install
+<br>
+
+## Requirements
+
+- ClojureScript 1.9.946 or newer. Tested with `:advanced` builds on 1.9.946 and on 1.10.238 through 1.12.145. ClojureScript 1.7 does not work, because it has no `unchecked-get`.
+- A JavaScript engine with `globalThis` (Node 12+, browsers from 2019 on). Without it, every value is `nil`, `false` or `:unknown`.
+
+<br>
+
+## Setup
 
 deps.edn:
 
@@ -34,10 +43,7 @@ Leiningen:
 [io.github.paintparty/js-runtime-detection "0.1.0"]
 ```
 
-## Requirements
-
-- ClojureScript 1.9.946 or newer. Tested with `:advanced` builds on 1.9.946 and on 1.10.238 through 1.12.145. ClojureScript 1.7 does not work, because it has no `unchecked-get`.
-- A JavaScript engine with `globalThis` (Node 12+, browsers from 2019 on). Without it, every value is `nil`, `false` or `:unknown`.
+<br>
 
 ## Usage
 
@@ -58,6 +64,8 @@ The library is ClojureScript only. From a `.cljc` file, require it inside a read
 (def server? #?(:clj true :cljs rt/js-server-runtime?))
 ```
 
+<br>
+
 ## Public defs
 
 | def                          | Value          | Answers                                             |
@@ -70,9 +78,28 @@ The library is ClojureScript only. From a `.cljc` file, require it inside a read
 | `js-runtime-has-node-apis?`  | boolean        | Can I use `fs`, `process.env` and other Node APIs?  |
 | `js-runtime-is-strict-node?` | boolean        | Is this actual Node, not Bun or Deno in Node mode?  |
 
-`js-runtime` is one of `:node`, `:deno`, `:bun`, `:workerd`, `:browser`, `:service-worker`, `:web-worker`, `:electron-renderer`, `:react-native` or `:unknown`.
+`js-runtime` is one of:
 
-`js-platform` is one of `:cloudflare`, `:vercel-edge`, `:netlify-edge`, `:fastly` or `nil`.
+`:node`\
+`:deno`\
+`:bun`\
+`:workerd`\
+`:browser`\
+`:service-worker`\
+`:web-worker`\
+`:electron-renderer`\
+`:react-native`\
+`:unknown`
+
+`js-platform` is one of:
+
+`:cloudflare`\
+`:vercel-edge`\
+`:netlify-edge`\
+`:fastly`\
+`nil`
+
+<br>
 
 ## Detection matrix
 
@@ -104,6 +131,8 @@ The Electron renderer row assumes `nodeIntegration` is enabled. With Electron's 
 Cloudflare Workers with the `nodejs_compat` flag (compatibility date 2025-09-15 or later) report `js-runtime-has-node-apis?` as true. The rest of the row is the same.
 
 Automated tests cover Node and jsdom in Node (dev and `:advanced` builds), and Cloudflare Workers with and without `nodejs_compat` (an `:advanced` build run in workerd through Miniflare). The other rows follow from each platform's documented globals and have not been run on those platforms.
+
+<br>
 
 ## Development
 
@@ -139,6 +168,8 @@ bb install         # install the jar to ~/.m2
   - [advanced_runner.cljs](test/js_runtime_detection/advanced_runner.cljs) is for the compiled builds. It calls `(enable-console-print!)`, which ClojureScript 1.9 needs on Node and which nbb doesn't have.
 - `test:cloudflare` builds [worker_probe.cljs](test/js_runtime_detection/worker_probe.cljs) with `:advanced` and no `:target`. [test/cloudflare/run.mjs](test/cloudflare/run.mjs) appends a `fetch` handler to the compiled file, loads it into workerd through Miniflare, and compares the returned values against the Cloudflare Workers row. It runs once without flags and once with `nodejs_compat`, with the compatibility date pinned to 2026-07-01.
 - A failing test sets the process exit code to 1, so `bb test` and `bb ci` stop.
+
+<br>
 
 ## License
 
