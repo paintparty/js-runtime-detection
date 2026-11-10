@@ -162,7 +162,7 @@ bb install         # install the jar to ~/.m2
 
 - A failing test sets the process exit code to 1, so `bb test` and `bb ci` stop.
 
-### Optional Cloudflare tests
+#### Optional werkerd (Cloudflare Workers) tests
 
 `bb test:cloudflare` runs the library in workerd, the runtime behind Cloudflare Workers. It needs Miniflare, which you can install into a gitignored folder with:
 
