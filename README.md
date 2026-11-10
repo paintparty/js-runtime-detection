@@ -14,11 +14,11 @@ A ClojureScript library that detects which JavaScript runtime and deployment pla
 - Netlify Edge
 - Fastly Compute
 
-Detection works by reading properties of `globalThis`. The library does not import any npm modules and loads in any JS environment. Every value is computed once, when the namespace loads. If your test setup installs jsdom, load this namespace after jsdom is in place.
+Detection works by reading properties of `globalThis`. The library has no dependencies and does not import Node.js built-in modules like `fs` or `os`, which don't exist in browsers or edge runtimes. A missing global gives `nil` instead of an error, so the library loads in any JS environment. Every value is computed once, when the namespace loads. If your test setup installs jsdom, load this namespace after jsdom is in place.
 
 Properties are read by string key, for example `globalThis["process"]["versions"]["node"]` rather than `globalThis.process.versions.node`. The Closure compiler renames dotted property names in `:advanced` builds but never changes string keys, so results are the same in dev builds and `:advanced` builds.
 
-Detection only looks at which globals exist and what they contain, such as `globalThis.Deno` or `navigator.userAgent`. Any other JavaScript running in the same environment can add or change those globals: a dependency, a polyfill, or a test setup like jsdom, which adds `window` and `document` to Node. Use the results to pick behavior, such as how to print output or which APIs to call, not as proof of where your code is running. For example, don't rely on `js-server-runtime?` to decide whether it's safe to read secrets or skip an authorization check.
+Detection only looks at which globals exist and what they contain, such as `globalThis.Deno` or `navigator.userAgent`. Other JavaScript code running in the same environment, such as a dependency, a polyfill or a test setup, can add or change those globals. For example, a polyfill can define a `process` global in a browser, and jsdom adds `window` and `document` to Node. Use the results to pick behavior, such as how to print output or which APIs to call, not as proof of where your code is running. For example, don't rely on `js-server-runtime?` to decide whether it's safe to read secrets or skip an authorization check.
 
 <br>
 
