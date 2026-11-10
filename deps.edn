@@ -1,5 +1,7 @@
 {:paths ["src"]
- :deps  {org.clojure/clojure {:mvn/version "1.12.5"}}
+ ;; No runtime dependencies. Clojure comes from the clojure CLI's defaults
+ ;; for the build and test aliases, and from the consumer's own setup.
+ :deps  {}
  :aliases
  {;; Latest ClojureScript, used by `bb test:advanced`
   :cljs-latest {:extra-paths ["test"]

@@ -123,213 +123,211 @@
 ;;   documented globals and have not been run on those platforms.
 
 
-#?(:cljs
-   (do
-     (def ^:private global-ref
-       (when (exists? js/globalThis) js/globalThis))
+(def ^:private global-ref
+  (when (exists? js/globalThis) js/globalThis))
 
-     (defn- gget
-       "Reads a property path from globalThis by string keys, e.g.
-        (gget \"process\" \"versions\" \"node\"). Returns nil when any step
-        is missing.
+(defn- gget
+  "Reads a property path from globalThis by string keys, e.g.
+   (gget \"process\" \"versions\" \"node\"). Returns nil when any step
+   is missing.
 
-        Reading through globalThis means an undeclared global (Deno in Node,
-        process in a browser) returns nil instead of throwing a
-        ReferenceError. String keys are not renamed by :advanced compilation,
-        and unchecked-get does not trigger :checked-arrays warnings the way
-        aget does."
-       [& ks]
-       (reduce (fn [o k] (if (some? o) (unchecked-get o k) (reduced nil)))
-               global-ref
-               ks))
+   Reading through globalThis means an undeclared global (Deno in Node,
+   process in a browser) returns nil instead of throwing a
+   ReferenceError. String keys are not renamed by :advanced compilation,
+   and unchecked-get does not trigger :checked-arrays warnings the way
+   aget does."
+  [& ks]
+  (reduce (fn [o k] (if (some? o) (unchecked-get o k) (reduced nil)))
+          global-ref
+          ks))
 
-     ;; -------------------------------------------------------------------
-     ;; Cached global lookups (one-time at namespace load)
-     ;; -------------------------------------------------------------------
+;; -------------------------------------------------------------------
+;; Cached global lookups (one-time at namespace load)
+;; -------------------------------------------------------------------
 
-     (def ^:private ua       (gget "navigator" "userAgent"))
-     (def ^:private win      (gget "window"))
-     (def ^:private deno?    (boolean (gget "Deno" "version" "deno")))
-     (def ^:private bun?     (boolean (gget "Bun")))
-     (def ^:private workerd? (= ua "Cloudflare-Workers"))
+(def ^:private ua       (gget "navigator" "userAgent"))
+(def ^:private win      (gget "window"))
+(def ^:private deno?    (boolean (gget "Deno" "version" "deno")))
+(def ^:private bun?     (boolean (gget "Bun")))
+(def ^:private workerd? (= ua "Cloudflare-Workers"))
 
-     ;; -------------------------------------------------------------------
-     ;; Primitive capability flags
-     ;; -------------------------------------------------------------------
+;; -------------------------------------------------------------------
+;; Primitive capability flags
+;; -------------------------------------------------------------------
 
-     (def js-runtime-has-dom?
-       "True anywhere `window` and `document` globals exist - real browsers,
-        jsdom, and the Electron renderer process. Use when your code needs DOM
-        APIs regardless of whether they're real or simulated (e.g., rendering
-        components, attaching event listeners, measuring element dimensions)."
-       (boolean (and win (gget "document"))))
+(def js-runtime-has-dom?
+  "True anywhere `window` and `document` globals exist - real browsers,
+   jsdom, and the Electron renderer process. Use when your code needs DOM
+   APIs regardless of whether they're real or simulated (e.g., rendering
+   components, attaching event listeners, measuring element dimensions)."
+  (boolean (and win (gget "document"))))
 
-     (def js-runtime-has-jsdom?
-       "True whenever jsdom is active, regardless of underlying runtime
-        (Node, Deno, or Bun). Use to detect test environments that simulate
-        a browser on top of a server runtime."
-       (boolean (some-> ua (.includes "jsdom"))))
+(def js-runtime-has-jsdom?
+  "True whenever jsdom is active, regardless of underlying runtime
+   (Node, Deno, or Bun). Use to detect test environments that simulate
+   a browser on top of a server runtime."
+  (boolean (some-> ua (.includes "jsdom"))))
 
-     (def js-runtime-has-node-apis?
-       "Resolves to `true` when Node's `process.versions.node` is present.
-        Includes Node itself, Deno 2+ (Node compat mode), Bun, Electron
-        (both processes), jsdom (which runs in Node), and Cloudflare Workers
-        with the nodejs_compat flag (compatibility date 2025-09-15 or later).
-        Use when you need to check for access to Node APIs like `fs`, `path`,
-        `process.env`, or native modules. Note: this is true under jsdom, so
-        pair with `(not js-runtime-has-dom?)` if you want to exclude test
-        envs. For a strict Node-only check, use `(= js-runtime :node)`."
-       (boolean (gget "process" "versions" "node")))
+(def js-runtime-has-node-apis?
+  "Resolves to `true` when Node's `process.versions.node` is present.
+   Includes Node itself, Deno 2+ (Node compat mode), Bun, Electron
+   (both processes), jsdom (which runs in Node), and Cloudflare Workers
+   with the nodejs_compat flag (compatibility date 2025-09-15 or later).
+   Use when you need to check for access to Node APIs like `fs`, `path`,
+   `process.env`, or native modules. Note: this is true under jsdom, so
+   pair with `(not js-runtime-has-dom?)` if you want to exclude test
+   envs. For a strict Node-only check, use `(= js-runtime :node)`."
+  (boolean (gget "process" "versions" "node")))
 
-     (def js-runtime-is-strict-node?
-       "True only in actual Node.js. Excludes Bun, Deno and Cloudflare Workers
-        even when they run in Node compatibility mode. Checks that
-        process.release.name is \"node\", which Deno and Cloudflare's
-        nodejs_compat also report, so those runtimes are excluded explicitly."
-       (and (= (gget "process" "release" "name") "node")
-            (not deno?)
-            (not bun?)
-            (not workerd?)))
+(def js-runtime-is-strict-node?
+  "True only in actual Node.js. Excludes Bun, Deno and Cloudflare Workers
+   even when they run in Node compatibility mode. Checks that
+   process.release.name is \"node\", which Deno and Cloudflare's
+   nodejs_compat also report, so those runtimes are excluded explicitly."
+  (and (= (gget "process" "release" "name") "node")
+       (not deno?)
+       (not bun?)
+       (not workerd?)))
 
 
-     (def js-runtime
-       "The JavaScript runtime, independent of deployment platform. One of:
+(def js-runtime
+  "The JavaScript runtime, independent of deployment platform. One of:
 
-        :node
-        :deno
-        :bun
-        :workerd
-        :browser
-        :service-worker
-        :web-worker
-        :electron-renderer
-        :react-native
-        :unknown
+   :node
+   :deno
+   :bun
+   :workerd
+   :browser
+   :service-worker
+   :web-worker
+   :electron-renderer
+   :react-native
+   :unknown
 
-        The :node branch uses `js-runtime-is-strict-node?`, so Deno and Bun
-        in Node compatibility mode are not reported as :node. jsdom reports
-        the runtime it runs on, not :browser.
+   The :node branch uses `js-runtime-is-strict-node?`, so Deno and Bun
+   in Node compatibility mode are not reported as :node. jsdom reports
+   the runtime it runs on, not :browser.
 
-        | Environment        | Value                |
-        |:-------------------|:---------------------|
-        | Real browser       | `:browser`           |
-        | Node               | `:node`              |
-        | Deno 2             | `:deno`              |
-        | Bun                | `:bun`               |
-        | Cloudflare Workers | `:workerd`           |
-        | Vercel Edge*       | `:workerd`           |
-        | Netlify Edge       | `:deno`              |
-        | jsdom in Node      | `:node`              |
-        | Electron renderer  | `:electron-renderer` |
-        | Electron main      | `:node`              |
-        | React Native       | `:react-native`      |
-        | Service Worker     | `:service-worker`    |
-        | Web Worker         | `:web-worker`        |
+   | Environment        | Value                |
+   |:-------------------|:---------------------|
+   | Real browser       | `:browser`           |
+   | Node               | `:node`              |
+   | Deno 2             | `:deno`              |
+   | Bun                | `:bun`               |
+   | Cloudflare Workers | `:workerd`           |
+   | Vercel Edge*       | `:workerd`           |
+   | Netlify Edge       | `:deno`              |
+   | jsdom in Node      | `:node`              |
+   | Electron renderer  | `:electron-renderer` |
+   | Electron main      | `:node`              |
+   | React Native       | `:react-native`      |
+   | Service Worker     | `:service-worker`    |
+   | Web Worker         | `:web-worker`        |
 
-        * Unverified. On Vercel Edge this may be :unknown.
-       "
-       (or
-        ;; Deno - must be checked b4 Node (Deno 2 shims process.versions.node)
-        (when deno? :deno)
+   * Unverified. On Vercel Edge this may be :unknown.
+  "
+  (or
+   ;; Deno - must be checked b4 Node (Deno 2 shims process.versions.node)
+   (when deno? :deno)
 
-        ;; Bun - must be checked b4 Node (Bun shims process.versions.node)
-        (when bun? :bun)
+   ;; Bun - must be checked b4 Node (Bun shims process.versions.node)
+   (when bun? :bun)
 
-        ;; workerd (Cloudflare Workers runtime)
-        (when workerd? :workerd)
+   ;; workerd (Cloudflare Workers runtime)
+   (when workerd? :workerd)
 
-        ;; Service Worker
-        (when (= (gget "self" "constructor" "name")
-                 "ServiceWorkerGlobalScope")
-          :service-worker)
+   ;; Service Worker
+   (when (= (gget "self" "constructor" "name")
+            "ServiceWorkerGlobalScope")
+     :service-worker)
 
-        ;; Dedicated or Shared Web Worker
-        (when (and (gget "importScripts") (not win))
-          :web-worker)
+   ;; Dedicated or Shared Web Worker
+   (when (and (gget "importScripts") (not win))
+     :web-worker)
 
-        ;; Electron renderer (has both window and process)
-        (when (and win (gget "process" "versions" "electron"))
-          :electron-renderer)
+   ;; Electron renderer (has both window and process)
+   (when (and win (gget "process" "versions" "electron"))
+     :electron-renderer)
 
-        ;; Browser - jsdom also defines window and document, so it is skipped
-        ;; here and falls through to the runtime it runs on
-        (when (and js-runtime-has-dom? (not js-runtime-has-jsdom?))
-          :browser)
+   ;; Browser - jsdom also defines window and document, so it is skipped
+   ;; here and falls through to the runtime it runs on
+   (when (and js-runtime-has-dom? (not js-runtime-has-jsdom?))
+     :browser)
 
-        ;; React Native
-        (when (or (gget "HermesInternal")
-                  (= (gget "navigator" "product") "ReactNative"))
-          :react-native)
+   ;; React Native
+   (when (or (gget "HermesInternal")
+             (= (gget "navigator" "product") "ReactNative"))
+     :react-native)
 
-        ;; Strict Node - uses process.release.name, which Deno/Bun don't fake
-        (when js-runtime-is-strict-node? :node)
+   ;; Strict Node - uses process.release.name, which Deno/Bun don't fake
+   (when js-runtime-is-strict-node? :node)
 
-        :unknown))
-
-
-     (def js-platform
-       "The deployment platform, independent of underlying runtime. One of:
-        :netlify-edge  - Netlify Edge Functions (runs on Deno)
-        :vercel-edge   - Vercel Edge Functions
-        :cloudflare    - Cloudflare Workers (runs on workerd)
-        :fastly        - Fastly Compute
-        nil            - no specific platform detected
-
-        Platforms are distinct from runtimes because they layer
-        platform-specific APIs (KV stores, env vars, request contexts) on
-        top of the same runtime. A platform can share a runtime with other
-        environments: Netlify Edge runs on Deno.
-
-        | Environment        | Value           |
-        |:-------------------|:----------------|
-        | Cloudflare Workers | `:cloudflare`   |
-        | Vercel Edge*       | `:vercel-edge`  |
-        | Netlify Edge       | `:netlify-edge` |
-        | Fastly Compute*    | `:fastly`       |
-        | Everything else    | `nil`           |
-
-        * Unverified.
-       "
-       (cond
-         (gget "Netlify")            :netlify-edge
-         (gget "EdgeRuntime")        :vercel-edge
-         workerd?                    :cloudflare
-         (gget "fastly")             :fastly
-         :else                       nil))
+   :unknown))
 
 
-     (def js-server-runtime?
-       "Resolves to `true` in server-side JS runtimes:
-        Node, Deno, Bun, and all edge platforms (Cloudflare, Vercel,
-        Netlify, Fastly), plus Electron main.
+(def js-platform
+  "The deployment platform, independent of underlying runtime. One of:
+   :netlify-edge  - Netlify Edge Functions (runs on Deno)
+   :vercel-edge   - Vercel Edge Functions
+   :cloudflare    - Cloudflare Workers (runs on workerd)
+   :fastly        - Fastly Compute
+   nil            - no specific platform detected
 
-        Resolves to `false` in real browsers, web workers, and React Native.
+   Platforms are distinct from runtimes because they layer
+   platform-specific APIs (KV stores, env vars, request contexts) on
+   top of the same runtime. A platform can share a runtime with other
+   environments: Netlify Edge runs on Deno.
 
-        Returns `true` under jsdom (jsdom has Node APIs available even
-        though it simulates a browser). Pair with `(not js-runtime-has-dom?)`
-        if you need to exclude environments where a DOM is present
-        (real or simulated).
+   | Environment        | Value           |
+   |:-------------------|:----------------|
+   | Cloudflare Workers | `:cloudflare`   |
+   | Vercel Edge*       | `:vercel-edge`  |
+   | Netlify Edge       | `:netlify-edge` |
+   | Fastly Compute*    | `:fastly`       |
+   | Everything else    | `nil`           |
 
-        | Environment        |  Value  |
-        |:-------------------|:-------:|
-        | Real browser       | `false` |
-        | Node               | `true`  |
-        | Deno 2             | `true`  |
-        | Bun                | `true`  |
-        | Cloudflare Workers | `true`  |
-        | Vercel Edge*       | `true`  |
-        | Netlify Edge       | `true`  |
-        | Fastly Compute*    | `true`  |
-        | jsdom in Node      | `true`  |
-        | Electron renderer  | `true`  |
-        | Electron main      | `true`  |
-        | React Native       | `false` |
-        | Web Worker         | `false` |
-        | Service Worker     | `false` |
+   * Unverified.
+  "
+  (cond
+    (gget "Netlify")            :netlify-edge
+    (gget "EdgeRuntime")        :vercel-edge
+    workerd?                    :cloudflare
+    (gget "fastly")             :fastly
+    :else                       nil))
 
-        * Unverified.
-        "
-       (if (and js-runtime-has-dom? (not (gget "process")))
-         false  ; fast path: real browser
-         (or (some? js-platform)
-             js-runtime-has-node-apis?)))))
+
+(def js-server-runtime?
+  "Resolves to `true` in server-side JS runtimes:
+   Node, Deno, Bun, and all edge platforms (Cloudflare, Vercel,
+   Netlify, Fastly), plus Electron main.
+
+   Resolves to `false` in real browsers, web workers, and React Native.
+
+   Returns `true` under jsdom (jsdom has Node APIs available even
+   though it simulates a browser). Pair with `(not js-runtime-has-dom?)`
+   if you need to exclude environments where a DOM is present
+   (real or simulated).
+
+   | Environment        |  Value  |
+   |:-------------------|:-------:|
+   | Real browser       | `false` |
+   | Node               | `true`  |
+   | Deno 2             | `true`  |
+   | Bun                | `true`  |
+   | Cloudflare Workers | `true`  |
+   | Vercel Edge*       | `true`  |
+   | Netlify Edge       | `true`  |
+   | Fastly Compute*    | `true`  |
+   | jsdom in Node      | `true`  |
+   | Electron renderer  | `true`  |
+   | Electron main      | `true`  |
+   | React Native       | `false` |
+   | Web Worker         | `false` |
+   | Service Worker     | `false` |
+
+   * Unverified.
+   "
+  (if (and js-runtime-has-dom? (not (gget "process")))
+    false  ; fast path: real browser
+    (or (some? js-platform)
+        js-runtime-has-node-apis?)))

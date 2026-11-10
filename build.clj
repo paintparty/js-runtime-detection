@@ -26,7 +26,9 @@
   (assoc opts
           :lib lib   :version version
           :jar-file  (format "target/%s-%s.jar" lib version)
-          :basis     (b/create-basis {})
+          ;; Project deps only. Without :root nil, the pom would list the
+          ;; Clojure version from tools.deps' built-in defaults.
+          :basis     (b/create-basis {:root nil :user nil})
           :class-dir class-dir
           :target    "target"
           :src-dirs  ["src"]

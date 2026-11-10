@@ -8,8 +8,6 @@ Properties are read by string key, so results are the same in dev builds and `:a
 
 Any script can define these globals, so don't use these values for security decisions.
 
-The namespace is `.cljc`, so you can require it from shared code, but the defs only exist on the ClojureScript side.
-
 ## Install
 
 deps.edn:
@@ -39,7 +37,7 @@ rt/js-runtime          ;; => :node
 rt/js-server-runtime?  ;; => true
 ```
 
-From a `.cljc` file, require it for the ClojureScript side only:
+The library is ClojureScript only. From a `.cljc` file, require it inside a reader conditional:
 
 ```clojure
 (ns my.app
