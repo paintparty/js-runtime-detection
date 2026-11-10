@@ -156,7 +156,7 @@ bb install         # install the jar to ~/.m2
 - Both tasks use the same build script, [script/build_advanced.clj](script/build_advanced.clj). It calls `cljs.build.api` rather than `cljs.main`, because ClojureScript 1.9.946 predates `cljs.main`.
 - `deps.edn` has one alias per ClojureScript version:
   - `:cljs-latest` uses ClojureScript 1.12.145.
-  - `:cljs-1.9` uses ClojureScript 1.9.946. It forces Clojure 1.9.0 and adds the `jaxb-api` jar, which that compiler needs to run on Java 11 or newer.
+  - `:cljs-1.9` uses ClojureScript 1.9.946. It forces Clojure 1.9.0 and adds the `jaxb-api` jar, which the ClojureScript 1.9.946 compiler needs to run on Java 11 or newer.
 - There are two test entrypoints:
   - [runner.cljs](test/js_runtime_detection/runner.cljs) is for nbb.
   - [advanced_runner.cljs](test/js_runtime_detection/advanced_runner.cljs) is for the compiled builds. It calls `(enable-console-print!)`, which ClojureScript 1.9 needs on Node and which nbb doesn't have.
