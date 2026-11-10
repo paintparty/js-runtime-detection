@@ -7,7 +7,7 @@
                   (let [test-js (str out-dir "/test.js")]
                     (clojure (str "-M:" alias) "script/build_advanced.clj" out-dir)
                     (shell "node" test-js)
-                    (shell {:extra-env {"JRD_ENV" "jsdom-node"}}
+                    (shell {:extra-env {"JS_RUNTIME_DETECT_ENV" "jsdom-node"}}
                            "node" "-r" "./test/stubs/jsdom.cjs" test-js)))
 
   test:node     {:doc  "Run the test suite on Node under nbb. Requires Node.js and npx (fetches nbb on first run)."

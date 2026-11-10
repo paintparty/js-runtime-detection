@@ -125,7 +125,7 @@ bb install        # install the jar to ~/.m2
 
 ### How the tests are set up
 
-- Each test run checks one row of the detection matrix. The `JRD_ENV` environment variable picks the row: `node` (the default) or `jsdom-node`.
+- Each test run checks one row of the detection matrix. The `JS_RUNTIME_DETECT_ENV` environment variable picks the row: `node` (the default) or `jsdom-node`.
 - `test:advanced` and `test:compat` compile the tests with `:advanced` optimizations, then run them on Node twice. The first run is plain. The second preloads [test/stubs/jsdom.cjs](test/stubs/jsdom.cjs), which sets the `window`, `document` and jsdom user agent globals that global-jsdom and jest-environment-jsdom install.
 - The `:advanced` runs catch property renaming by the Closure compiler, which dev builds and nbb don't show.
 - Both tasks use the same build script, [script/build_advanced.clj](script/build_advanced.clj). It calls `cljs.build.api` rather than `cljs.main`, because ClojureScript 1.9.946 predates `cljs.main`.

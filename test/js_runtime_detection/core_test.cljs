@@ -3,8 +3,8 @@
             [js-runtime-detection.core :as rt]))
 
 (def ^:private expected
-  "Rows of the detection matrix, keyed by the JRD_ENV environment variable
-   the test process runs under."
+  "Rows of the detection matrix, keyed by the JS_RUNTIME_DETECT_ENV
+   environment variable the test process runs under."
   {"node"       {:js-runtime                 :node
                  :js-platform                nil
                  :js-server-runtime?         true
@@ -21,7 +21,7 @@
                  :js-runtime-is-strict-node? true}})
 
 (def ^:private env-name
-  (or (some-> (unchecked-get js/process "env") (unchecked-get "JRD_ENV"))
+  (or (some-> (unchecked-get js/process "env") (unchecked-get "JS_RUNTIME_DETECT_ENV"))
       "node"))
 
 (def ^:private actual
@@ -34,7 +34,7 @@
    :js-runtime-is-strict-node? rt/js-runtime-is-strict-node?})
 
 (deftest matches-detection-matrix-row
-  (is (contains? expected env-name) (str "Unknown JRD_ENV: " env-name))
+  (is (contains? expected env-name) (str "Unknown JS_RUNTIME_DETECT_ENV: " env-name))
   (is (= (get expected env-name) actual)))
 
 (deftest predicates-return-booleans
