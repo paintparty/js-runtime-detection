@@ -116,14 +116,20 @@ Automated tests cover Node and jsdom in Node (dev and `:advanced` builds), and C
 
 ## Development
 
-Run `npm install` once to get Miniflare, which `test:cloudflare` needs.
+The library has no dependencies, and the repo has no `package.json`. The Cloudflare test is optional. It needs Miniflare, which you can install into a gitignored folder with:
+
+```sh
+npm install --no-save --prefix test/cloudflare miniflare@4.20260730.0
+```
+
+This creates only `test/cloudflare/node_modules`. Without it, `bb test:cloudflare` prints SKIPPED and `bb test` continues.
 
 ```sh
 bb test:node       # run the tests on Node (via nbb)
 bb test:advanced   # compile the tests with :advanced on the latest ClojureScript, run on Node plain and with jsdom globals
 bb test:compat     # same, on the oldest supported ClojureScript (1.9.946)
-bb test:cloudflare # run a probe in workerd (Cloudflare Workers) via Miniflare, with and without nodejs_compat
-bb test            # all four of the above
+bb test:cloudflare # optional: run a probe in workerd (Cloudflare Workers) via Miniflare, with and without nodejs_compat
+bb test            # all four of the above (test:cloudflare skips if Miniflare is not installed)
 bb ci              # run the tests and build the jar
 bb install         # install the jar to ~/.m2
 ```

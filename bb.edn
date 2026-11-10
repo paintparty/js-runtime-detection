@@ -19,10 +19,14 @@
   test:compat   {:doc  "Compile the tests with :advanced on the oldest supported ClojureScript (1.9.946) and run them on Node, plain and with jsdom globals."
                  :task (run-advanced "cljs-1.9" "target/cljs-1.9")}
 
-  test:cloudflare {:doc  "Compile a probe with :advanced and run it in workerd (Cloudflare's Workers runtime) through Miniflare, with and without nodejs_compat. Requires `npm install`."
-                   :task (do (clojure "-M:cljs-latest" "script/build_advanced.clj" "target/cloudflare-probe"
-                                      "js-runtime-detection.worker-probe" "browser")
-                             (shell "node" "test/cloudflare/run.mjs" "target/cloudflare-probe/main.js"))}
+  test:cloudflare {:doc  "Compile a probe with :advanced and run it in workerd (Cloudflare's Workers runtime) through Miniflare, with and without nodejs_compat. Optional: skipped unless Miniflare is installed in test/cloudflare."
+                   :requires ([babashka.fs :as fs])
+                   :task (if (fs/exists? "test/cloudflare/node_modules/miniflare")
+                           (do (clojure "-M:cljs-latest" "script/build_advanced.clj" "target/cloudflare-probe"
+                                        "js-runtime-detection.worker-probe" "browser")
+                               (shell "node" "test/cloudflare/run.mjs" "target/cloudflare-probe/main.js"))
+                           (println (str "SKIPPED test:cloudflare: Miniflare is not installed. To enable it, run:\n"
+                                         "  npm install --no-save --prefix test/cloudflare miniflare@4.20260730.0")))}
 
   test          {:doc     "Run test:node, test:advanced, test:compat and test:cloudflare."
                  :depends [test:node test:advanced test:compat test:cloudflare]}
