@@ -1,12 +1,24 @@
 # js-runtime-detection
 
-Tells ClojureScript code which JavaScript runtime and deployment platform it is running in: Node, Deno, Bun, a browser, a web or service worker, Electron, React Native, Cloudflare Workers, Vercel Edge, Netlify Edge or Fastly Compute.
+A ClojureScript library that detects which JavaScript runtime and deployment platform your code is running in:
 
-Detection works by reading properties of `globalThis`. The namespace imports no Node modules, so it loads in any JS environment. Every value is computed once, when the namespace loads. If your test setup installs jsdom, load this namespace after jsdom is in place.
+- Node
+- Deno
+- Bun
+- Browsers
+- Web workers and service workers
+- Electron
+- React Native
+- Cloudflare Workers
+- Vercel Edge
+- Netlify Edge
+- Fastly Compute
 
-Properties are read by string key, so results are the same in dev builds and `:advanced` builds.
+Detection works by reading properties of `globalThis`. The library does not import any npm modules and loads in any JS environment. Every value is computed once, when the namespace loads. If your test setup installs jsdom, load this namespace after jsdom is in place.
 
-Any script can define these globals, so don't use these values for security decisions.
+Properties are read by string key, for example `globalThis["process"]["versions"]["node"]` rather than `globalThis.process.versions.node`. The Closure compiler renames dotted property names in `:advanced` builds but never changes string keys, so results are the same in dev builds and `:advanced` builds.
+
+Detection only looks at which globals exist and what they contain, such as `globalThis.Deno` or `navigator.userAgent`. Any other JavaScript running in the same environment can add or change those globals: a dependency, a polyfill, or a test setup like jsdom, which adds `window` and `document` to Node. Use the results to pick behavior, such as how to print output or which APIs to call, not as proof of where your code is running. For example, don't rely on `js-server-runtime?` to decide whether it's safe to read secrets or skip an authorization check.
 
 ## Install
 
