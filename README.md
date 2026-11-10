@@ -1,18 +1,6 @@
 # js-runtime-detection
 
-A ClojureScript library that detects which JavaScript runtime and deployment platform your code is running in:
-
-- Node
-- Deno
-- Bun
-- Browsers
-- Web workers and service workers
-- Electron
-- React Native
-- Cloudflare Workers
-- Vercel Edge
-- Netlify Edge
-- Fastly Compute
+A ClojureScript library that detects which JavaScript runtime and deployment platform your code is running in (e.g., Node, Deno, Bun or a browser).
 
 Detection works by reading properties of `globalThis`. The library has no dependencies and does not import Node.js built-in modules like `fs` or `os`, which don't exist in browsers or edge runtimes. A missing global gives `nil` instead of an error, so the library loads in any JS environment. Every value is computed once, when `js-runtime-detection.core` loads. If your test setup installs jsdom, load `js-runtime-detection.core` after jsdom is in place.
 
