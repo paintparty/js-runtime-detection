@@ -14,11 +14,13 @@ A ClojureScript library that detects which JavaScript runtime and deployment pla
 - Netlify Edge
 - Fastly Compute
 
-Detection works by reading properties of `globalThis`. The library has no dependencies and does not import Node.js built-in modules like `fs` or `os`, which don't exist in browsers or edge runtimes. A missing global gives `nil` instead of an error, so the library loads in any JS environment. Every value is computed once, when the namespace loads. If your test setup installs jsdom, load this namespace after jsdom is in place.
+Detection works by reading properties of `globalThis`. The library has no dependencies and does not import Node.js built-in modules like `fs` or `os`, which don't exist in browsers or edge runtimes. A missing global gives `nil` instead of an error, so the library loads in any JS environment. Every value is computed once, when `js-runtime-detection.core` loads. If your test setup installs jsdom, load `js-runtime-detection.core` after jsdom is in place.
 
 Properties are read by string key, for example `globalThis["process"]["versions"]["node"]` rather than `globalThis.process.versions.node`. The Closure compiler renames dotted property names in `:advanced` builds but never changes string keys, so results are the same in dev builds and `:advanced` builds.
 
-Detection only looks at which globals exist and what they contain, such as `globalThis.Deno` or `navigator.userAgent`. Other JavaScript code running in the same environment, such as a dependency, a polyfill or a test setup, can add or change those globals. For example, a polyfill can define a `process` global in a browser, and jsdom adds `window` and `document` to Node. Use the results to pick behavior, such as how to print output or which APIs to call, not as proof of where your code is running. For example, don't rely on `js-server-runtime?` to decide whether it's safe to read secrets or skip an authorization check.
+Detection only looks at which globals exist and what they contain, such as `globalThis.Deno` or `navigator.userAgent`. Other JS code running in the same environment, such as a dependency, a polyfill or a test setup, can add or change those globals. For example, a polyfill can define a `process` global in a browser, and jsdom adds `window` and `document` to Node.
+
+Use `js-runtime`, `js-platform` and the other defs to decide how your program behaves, such as how to print output or which APIs to call. Don't treat them as a guarantee of where your code is running. They report what the globals look like. For example, any code that sets `process.versions.node` in a browser makes `js-server-runtime?` and `js-runtime-has-node-apis?` return `true` there. That's why they shouldn't drive security decisions, such as whether it's safe to read secrets or skip an authorization check.
 
 <br>
 
