@@ -64,51 +64,30 @@ The library is ClojureScript only. From a `.cljc` file, require it inside a read
 
 ## Detection matrix
 
-| Environment        | `js-runtime`         | `js-platform`   |
-|:-------------------|:---------------------|:----------------|
-| Real browser       | `:browser`           | `nil`           |
-| Node               | `:node`              | `nil`           |
-| jsdom in Node      | `:node`              | `nil`           |
-| Deno 2             | `:deno`              | `nil`           |
-| jsdom in Deno      | `:deno`              | `nil`           |
-| Bun                | `:bun`               | `nil`           |
-| jsdom in Bun       | `:bun`               | `nil`           |
-| Cloudflare Workers | `:workerd`           | `:cloudflare`   |
-| Vercel Edge*       | `:workerd`           | `:vercel-edge`  |
-| Netlify Edge       | `:deno`              | `:netlify-edge` |
-| Fastly Compute*    | `:unknown`           | `:fastly`       |
-| Electron renderer  | `:electron-renderer` | `nil`           |
-| Electron main      | `:node`              | `nil`           |
-| React Native       | `:react-native`      | `nil`           |
-| Service Worker     | `:service-worker`    | `nil`           |
-| Web Worker         | `:web-worker`        | `nil`           |
-
-| Environment        | `js-server-runtime?` | `has-dom?` | `has-jsdom?` | `has-node-apis?` | `is-strict-node?` |
-|:-------------------|:--------------------:|:----------:|:------------:|:----------------:|:-----------------:|
-| Real browser       | false                | true       | false        | false            | false             |
-| Node               | true                 | false      | false        | true             | true              |
-| jsdom in Node      | true                 | true       | true         | true             | true              |
-| Deno 2             | true                 | false      | false        | true             | false             |
-| jsdom in Deno      | true                 | true       | true         | true             | false             |
-| Bun                | true                 | false      | false        | true             | false             |
-| jsdom in Bun       | true                 | true       | true         | true             | false             |
-| Cloudflare Workers | true                 | false      | false        | false            | false             |
-| Vercel Edge*       | true                 | false      | false        | false            | false             |
-| Netlify Edge       | true                 | false      | false        | false            | false             |
-| Fastly Compute*    | true                 | false      | false        | false            | false             |
-| Electron renderer  | true                 | true       | false        | true             | false             |
-| Electron main      | true                 | false      | false        | true             | true              |
-| React Native       | false                | false      | false        | false            | false             |
-| Service Worker     | false                | false      | false        | false            | false             |
-| Web Worker         | false                | false      | false        | false            | false             |
-
-The `has-*` and `is-*` columns are short for `js-runtime-has-dom?`, `js-runtime-has-jsdom?`, `js-runtime-has-node-apis?` and `js-runtime-is-strict-node?`.
+| Environment        | `js-runtime`         | `js-platform`   | `js-server-runtime?` | `js-runtime-has-dom?` | `js-runtime-has-jsdom?` | `js-runtime-has-node-apis?` | `js-runtime-is-strict-node?` |
+|:-------------------|:---------------------|:----------------|:--------------------:|:---------------------:|:-----------------------:|:---------------------------:|:----------------------------:|
+| Real browser       | `:browser`           | `nil`           | false                | true                  | false                   | false                       | false                        |
+| Node               | `:node`              | `nil`           | true                 | false                 | false                   | true                        | true                         |
+| jsdom in Node      | `:node`              | `nil`           | true                 | true                  | true                    | true                        | true                         |
+| Deno 2             | `:deno`              | `nil`           | true                 | false                 | false                   | true                        | false                        |
+| jsdom in Deno      | `:deno`              | `nil`           | true                 | true                  | true                    | true                        | false                        |
+| Bun                | `:bun`               | `nil`           | true                 | false                 | false                   | true                        | false                        |
+| jsdom in Bun       | `:bun`               | `nil`           | true                 | true                  | true                    | true                        | false                        |
+| Cloudflare Workers | `:workerd`           | `:cloudflare`   | true                 | false                 | false                   | false                       | false                        |
+| Vercel Edge*       | `:workerd`           | `:vercel-edge`  | true                 | false                 | false                   | false                       | false                        |
+| Netlify Edge       | `:deno`              | `:netlify-edge` | true                 | false                 | false                   | false                       | false                        |
+| Fastly Compute*    | `:unknown`           | `:fastly`       | true                 | false                 | false                   | false                       | false                        |
+| Electron renderer  | `:electron-renderer` | `nil`           | true                 | true                  | false                   | true                        | false                        |
+| Electron main      | `:node`              | `nil`           | true                 | false                 | false                   | true                        | true                         |
+| React Native       | `:react-native`      | `nil`           | false                | false                 | false                   | false                       | false                        |
+| Service Worker     | `:service-worker`    | `nil`           | false                | false                 | false                   | false                       | false                        |
+| Web Worker         | `:web-worker`        | `nil`           | false                | false                 | false                   | false                       | false                        |
 
 Under jsdom, `js-server-runtime?` and `js-runtime-has-node-apis?` are true, because jsdom runs on a server runtime. Pair them with `(not js-runtime-has-dom?)` to exclude test environments that simulate a browser.
 
 \* Rows marked with an asterisk are unverified. Vercel's Edge Runtime is not workerd, so on Vercel Edge `js-runtime` may be `:unknown` rather than `:workerd`. The `:fastly` platform check relies on a `fastly` global, which newer versions of Fastly's JavaScript runtime may no longer define.
 
-The Electron renderer rows assume `nodeIntegration` is enabled. With Electron's defaults (context isolation on, `nodeIntegration` off), the renderer has no `process` global and reports the same values as a real browser.
+The Electron renderer row assumes `nodeIntegration` is enabled. With Electron's defaults (context isolation on, `nodeIntegration` off), the renderer has no `process` global and reports the same values as a real browser.
 
 Cloudflare Workers with the `nodejs_compat` flag (compatibility date 2025-09-15 or later) report `js-runtime-has-node-apis?` as true. The rest of the row is the same.
 
