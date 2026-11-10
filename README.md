@@ -20,7 +20,7 @@ Properties are read by string key, for example `globalThis["process"]["versions"
 
 Detection only looks at which globals exist and what they contain, such as `globalThis.Deno` or `navigator.userAgent`. Other JS code running in the same environment, such as a dependency, a polyfill or a test setup, can add or change those globals. For example, a polyfill can define a `process` global in a browser, and jsdom adds `window` and `document` to Node.
 
-Use `js-runtime`, `js-platform` and the other defs to decide how your program behaves, such as how to print output or which APIs to call. Don't treat these values as a guarantee of where your code is running, as they only report what the globals look like. For example, you could have JS code running in a browser that sets `process.versions.node`, which would result in `js-server-runtime?` and `js-runtime-has-node-apis?` returning `true`. For this reason, these values should not be relied on for security decisions.
+Use `js-runtime`, `js-platform` and the other defs to decide how your program behaves, such as how to print output or which APIs to call. Don't treat these values as a guarantee of where your code is running, as they only report what the globals look like. For example, you could have JS code running in a browser that sets `process.versions.node`, which would result in `js-server-runtime?` and `js-runtime-has-node-apis?` returning `true`. For this reason, the values of the public defs in `js-runtime-detection.core` should not be relied on for security decisions.
 
 <br>
 
