@@ -33,6 +33,8 @@ Leiningen:
 [io.github.paintparty/js-runtime-detection "0.1.0"]
 ```
 
+To use it as a git dependency instead, see [Consuming js-runtime-detection as a git dependency](docs/git-deps.md).
+
 <br>
 
 ## Usage
@@ -133,13 +135,14 @@ Automated tests cover Node and jsdom in Node (dev and `:advanced` builds), and C
 The library has zero dependencies, and no `package.json`.
 
 ```sh
-bb test:node       # run the tests on Node (via nbb)
+bb test            # run the tests on Node (via nbb)
 bb test:advanced   # compile the tests with :advanced on the latest ClojureScript, run on Node plain and with jsdom globals
 bb test:compat     # same, on the oldest supported ClojureScript (1.9.946)
 bb test:cloudflare # optional: run a probe in workerd (Cloudflare Workers) via Miniflare, with and without nodejs_compat
-bb test            # all four of the above (test:cloudflare skips if Miniflare is not installed)
+bb test:all        # all four of the above (test:cloudflare skips if Miniflare is not installed)
 bb ci              # run the tests and build the jar
 bb install         # install the jar to ~/.m2
+bb docs:git-deps   # after tagging a release: update README versions and docs/git-deps.md
 ```
 
 ### How the tests work 
@@ -160,9 +163,9 @@ bb install         # install the jar to ~/.m2
   - [runner.cljs](test/js_runtime_detection/runner.cljs) is for nbb.
   - [advanced_runner.cljs](test/js_runtime_detection/advanced_runner.cljs) is for the compiled builds. It calls `(enable-console-print!)`, which ClojureScript 1.9 needs on Node and which nbb doesn't have.
 
-- A failing test sets the process exit code to 1, so `bb test` and `bb ci` stop.
+- A failing test sets the process exit code to 1, so `bb test:all` and `bb ci` stop.
 
-#### Optional werkerd (Cloudflare Workers) tests
+#### Optional workerd (Cloudflare Workers) tests
 
 `bb test:cloudflare` runs the library in workerd, the runtime behind Cloudflare Workers. It needs Miniflare, which you can install into a gitignored folder with:
 
@@ -170,9 +173,13 @@ bb install         # install the jar to ~/.m2
 npm install --no-save --prefix test/cloudflare miniflare@4.20260730.0
 ```
 
-This creates only `test/cloudflare/node_modules`. Without it, `bb test:cloudflare` prints SKIPPED and `bb test` continues.
+This creates only `test/cloudflare/node_modules`. Without it, `bb test:cloudflare` prints SKIPPED and `bb test:all` continues.
 
 The task builds [worker_probe.cljs](test/js_runtime_detection/worker_probe.cljs) with `:advanced` and no `:target`. [test/cloudflare/run.mjs](test/cloudflare/run.mjs) appends a `fetch` handler to the compiled file, loads it into workerd through Miniflare, and compares the returned values against the Cloudflare Workers row. It runs once without flags and once with `nodejs_compat`, with the compatibility date pinned to 2026-07-01.
+
+### Updating docs after a release
+
+After tagging a release (for example `git tag v0.2.0`), run `bb docs:git-deps`. It updates the version numbers in the Setup section of this README to match the tag, and regenerates [docs/git-deps.md](docs/git-deps.md) from [docs/git-deps.template.md](docs/git-deps.template.md) with the tag and its commit SHA. Commit both files and push.
 
 <br>
 

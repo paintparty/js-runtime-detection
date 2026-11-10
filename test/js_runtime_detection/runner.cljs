@@ -1,5 +1,5 @@
 (ns js-runtime-detection.runner
-  "Test entrypoint for `bb test:node` (nbb). Compiled builds use
+  "Test entrypoint for `bb test` (nbb). Compiled builds use
    js-runtime-detection.advanced-runner instead.
 
    Under nbb, `run-tests` returns nil and the summary is delivered through the

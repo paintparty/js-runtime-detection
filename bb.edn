@@ -1,44 +1,97 @@
 {:tasks
- {:init         (defn run-advanced
-                  "Compiles the tests with :advanced using the ClojureScript
-                   from `alias`, then runs them on Node, plain and with jsdom
-                   globals stubbed in."
-                  [alias out-dir]
-                  (let [test-js (str out-dir "/main.js")]
-                    (clojure (str "-M:" alias) "script/build_advanced.clj" out-dir)
-                    (shell "node" test-js)
-                    (shell {:extra-env {"JS_RUNTIME_DETECT_ENV" "jsdom-node"}}
-                           "node" "-r" "./test/stubs/jsdom.cjs" test-js)))
+ {:init
+  (defn run-advanced
+    "Compiles the tests with :advanced using the ClojureScript from `alias`,
+     then runs them on Node, plain and with jsdom globals stubbed in."
+    [alias out-dir]
+    (let [test-js (str out-dir "/main.js")]
+      (clojure (str "-M:" alias) "script/build_advanced.clj" out-dir)
+      (shell "node" test-js)
+      (shell {:extra-env {"JS_RUNTIME_DETECT_ENV" "jsdom-node"}}
+             "node" "-r" "./test/stubs/jsdom.cjs" test-js)))
 
-  test:node     {:doc  "Run the test suite on Node under nbb. Requires Node.js and npx (fetches nbb on first run)."
-                 :task (shell "npx" "--yes" "nbb" "-cp" "src:test" "test/js_runtime_detection/runner.cljs")}
+  ;; Test
+  ;; ---------------------------------------------------------------------------
+  test
+  {:doc  "Run the test suite on Node under nbb. Requires Node.js and npx (fetches nbb on first run)."
+   :task (shell "npx" "--yes" "nbb" "-cp" "src:test" "test/js_runtime_detection/runner.cljs")}
 
-  test:advanced {:doc  "Compile the tests with :advanced on the latest ClojureScript and run them on Node, plain and with jsdom globals. Catches property renaming that dev builds don't show."
-                 :task (run-advanced "cljs-latest" "target/cljs-latest")}
+  test:advanced
+  {:doc  "Compile the tests with :advanced on the latest ClojureScript and run them on Node, plain and with jsdom globals. Catches property renaming that dev builds don't show."
+   :task (run-advanced "cljs-latest" "target/cljs-latest")}
 
-  test:compat   {:doc  "Compile the tests with :advanced on the oldest supported ClojureScript (1.9.946) and run them on Node, plain and with jsdom globals."
-                 :task (run-advanced "cljs-1.9" "target/cljs-1.9")}
+  test:compat
+  {:doc  "Compile the tests with :advanced on the oldest supported ClojureScript (1.9.946) and run them on Node, plain and with jsdom globals."
+   :task (run-advanced "cljs-1.9" "target/cljs-1.9")}
 
-  test:cloudflare {:doc  "Compile a probe with :advanced and run it in workerd (Cloudflare's Workers runtime) through Miniflare, with and without nodejs_compat. Optional: skipped unless Miniflare is installed in test/cloudflare."
-                   :requires ([babashka.fs :as fs])
-                   :task (if (fs/exists? "test/cloudflare/node_modules/miniflare")
-                           (do (clojure "-M:cljs-latest" "script/build_advanced.clj" "target/cloudflare-probe"
-                                        "js-runtime-detection.worker-probe" "browser")
-                               (shell "node" "test/cloudflare/run.mjs" "target/cloudflare-probe/main.js"))
-                           (println (str "SKIPPED test:cloudflare: Miniflare is not installed. To enable it, run:\n"
-                                         "  npm install --no-save --prefix test/cloudflare miniflare@4.20260730.0")))}
+  test:cloudflare
+  {:doc      "Compile a probe with :advanced and run it in workerd (Cloudflare's Workers runtime) through Miniflare, with and without nodejs_compat. Optional: skipped unless Miniflare is installed in test/cloudflare."
+   :requires ([babashka.fs :as fs])
+   :task     (if (fs/exists? "test/cloudflare/node_modules/miniflare")
+               (do (clojure "-M:cljs-latest" "script/build_advanced.clj" "target/cloudflare-probe"
+                            "js-runtime-detection.worker-probe" "browser")
+                   (shell "node" "test/cloudflare/run.mjs" "target/cloudflare-probe/main.js"))
+               (println (str "SKIPPED test:cloudflare: Miniflare is not installed. To enable it, run:\n"
+                             "  npm install --no-save --prefix test/cloudflare miniflare@4.20260730.0")))}
 
-  test          {:doc     "Run test:node, test:advanced, test:compat and test:cloudflare."
-                 :depends [test:node test:advanced test:compat test:cloudflare]}
+  test:all
+  {:doc     "Run test, test:advanced, test:compat and test:cloudflare."
+   :depends [test test:advanced test:compat test:cloudflare]}
 
-  ci            {:doc     "Run the tests and build the JAR."
-                 :depends [test]
-                 :task    (clojure "-T:build" "jar")}
+  ;; Build
+  ;; ---------------------------------------------------------------------------
+  ci
+  {:doc     "Run the CI pipeline of tests and build the JAR."
+   :depends [test:all]
+   :task    (clojure "-T:build" "jar")}
 
-  install       {:doc     "Install the JAR locally (build via ci)."
-                 :depends [ci]
-                 :task    (clojure "-T:build" "install")}
+  ci:deploy
+  {:doc     "Run the CI pipeline and deploy the JAR to Clojars."
+   :depends [ci]
+   :task    (clojure "-T:build" "deploy")}
 
-  ci:deploy     {:doc     "Run the CI pipeline and deploy the JAR to Clojars."
-                 :depends [ci]
-                 :task    (clojure "-T:build" "deploy")}}}
+  install
+  {:doc     "Install the JAR locally (build via ci)."
+   :depends [ci]
+   :task    (clojure "-T:build" "install")}
+
+  ;; Docs
+  ;; ---------------------------------------------------------------------------
+  docs:git-deps
+  {:doc      "Regenerate docs/git-deps.md from the latest tag, and update the version numbers in README.md to match it. Uses HEAD for the git deps doc, and leaves README.md alone, if there are no tags yet."
+   :requires ([babashka.process :as p]
+              [clojure.string :as str])
+   :task
+   (let [sh      (fn [& args]
+                   (-> (apply p/shell {:out :string :err :string :continue true} args)
+                       :out
+                       str/trim))
+         tag     (not-empty (sh "git describe --tags --abbrev=0"))
+         sha     (sh "git rev-list -n 1" (or tag "HEAD"))
+         ;; git@github.com:owner/repo.git -> https://github.com/owner/repo
+         url     (-> (sh "git remote get-url origin")
+                     (str/replace (re-pattern "^git@github[.]com:") "https://github.com/")
+                     (str/replace (re-pattern "[.]git$") ""))
+         project (last (str/split url (re-pattern "/")))
+         lib     (second (re-find (re-pattern "[(]def lib '(\\S+)[)]")
+                                  (slurp "build.clj")))]
+     (spit "docs/git-deps.md"
+           (-> (slurp "docs/git-deps.template.md")
+               (str/replace "{{PROJECT}}" project)
+               (str/replace "{{LIB}}" lib)
+               (str/replace "{{URL}}" (str "\"" url "\""))
+               (str/replace "{{TAG}}" (str "\"" (or tag "<no tag yet>") "\""))
+               (str/replace "{{SHA}}" (str "\"" sha "\""))))
+     (println "Wrote docs/git-deps.md for" (or tag "HEAD") sha)
+     (if tag
+       ;; v0.2.0 -> 0.2.0 in the deps.edn and Leiningen coordinates
+       (let [version (str/replace tag (re-pattern "^v") "")
+             q       (java.util.regex.Pattern/quote lib)]
+         (spit "README.md"
+               (-> (slurp "README.md")
+                   (str/replace (re-pattern (str "(" q " [{]:mvn/version \")[^\"]+(\"[}])"))
+                                (str "$1" version "$2"))
+                   (str/replace (re-pattern (str "([\\[]" q " \")[^\"]+(\"[\\]])"))
+                                (str "$1" version "$2"))))
+         (println "Updated README.md to version" version))
+       (println "No tags yet, so the SHA is from HEAD and README.md is unchanged. Rerun after tagging a release.")))}}}
