@@ -1,6 +1,6 @@
 # js-runtime-detection
 
-**Detects JS runtime details. Built for ClojureScript dialects.**\
+**JS runtime detection for ClojureScript dialects.**\
 <sub>Works with ClojureScript, Squint, nbb, Cherry, and Clojurific</sub>
 
 <br />
@@ -205,7 +205,7 @@ Detection works by reading properties of the global object, which is `globalThis
 
 The values of all the public defs in the library are computed once, when `js-runtime-detection.core` loads. If your test setup installs jsdom, load `js-runtime-detection.core` after jsdom is in place.
 
-Properties are read by string key, for example `globalThis["process"]["versions"]["node"]` rather than `globalThis.process.versions.node`. The Closure compiler, which ClojureScript uses for `:advanced` builds, renames dotted property names but never changes string keys, so results are the same in dev builds and `:advanced` builds.
+Properties are read by string key, for example `globalThis["process"]["versions"]["node"]` rather than dot notation e.g., `globalThis.process.versions.node`. The Closure compiler, which ClojureScript uses for `:advanced` builds, renames dotted property names but never changes string keys, so results are the same in dev builds and `:advanced` builds.
 
 The library looks for various global vars (`Deno`, `Bun`, `process`, etc.). When they don't exist, the lookup returns `nil` instead of throwing an error. Detection only looks at which globals exist and what they contain, such as `globalThis.Deno` or `navigator.userAgent`. Other JS code running in the same environment, such as a dependency, a polyfill or a test setup, can add or change those globals. For example, a polyfill can define a `process` global in a browser, and jsdom adds `window` and `document` to Node.
 
