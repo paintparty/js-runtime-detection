@@ -199,7 +199,7 @@ The other rows in the detection matrix above follow from each platform's documen
 
 ## How it works
 
-The library also has no dependencies and does not import Node.js built-in modules like `fs` or `os`, which don't exist in browsers or edge runtimes, so it will load in any JS environment\
+The library also has zero dependencies. It does not import any Node.js built-in modules like `fs` or `os`, which don't exist in browsers or edge runtimes. The library should load in any JS environment.\
 \
 Detection works by reading properties of the global object, which is `globalThis` in modern engines. In older engines without `globalThis` (Node before 12, IE11, Safari before 12.1), the library falls back to `self`, `window` or `global`. The exception to this fallback chain is Cherry and Clojurific, which both rely on `globalThis` for their own runtimes.
 
@@ -215,7 +215,7 @@ The library looks for various global vars (`Deno`, `Bun`, `process`, etc.). When
 
 ## Development
 
-The library has zero dependencies, and no `package.json`.
+Available dev tasks via `bb.edn`:
 
 ```sh
 bb test            # same as test:nbb
@@ -237,7 +237,9 @@ bb docs:git-deps   # after tagging a release: regenerate docs/git-deps.md
 
 - Each test run checks one row of the detection matrix. The `JS_RUNTIME_DETECT_ENV` env var determines the row: `node` (the default) or `jsdom-node`.
 
-- `test:advanced` and `test:compat` compile the tests with `:advanced` optimizations, then run them three times on Node. The first run is no-frills. The second preloads [test/stubs/jsdom.cjs](test/stubs/jsdom.cjs), which sets the `window`, `document` and jsdom user agent globals that global-jsdom and jest-environment-jsdom install. The third preloads [test/stubs/no-globalthis.cjs](test/stubs/no-globalthis.cjs), which deletes `globalThis` to imitate older engines.
+- `test:advanced` and `test:compat` compile the tests with `:advanced` optimizations, then run them three times on Node. The first run is no-frills. The second preloads [test/stubs/jsdom.cjs](test/stubs/jsdom.cjs), which sets the `window`, `document` and jsdom user agent globals that global-jsdom and jest-environment-jsdom install. The third preloads [test/stubs/no-globalthis.cjs](test/stubs/no-globalthis.cjs), which deletes `globalThis` to imitate older engines. That third run leaves out the `NODE_USE_ENV_PROXY` env var, because with it set, Node's own HTTP proxy setup reads `globalThis` after the preload and crashes before the tests start.
+
+- Each run prints a label first, naming the dialect and the row, for example `=== Squint 0.15.212 | Node with jsdom globals`.
 
 - The `:advanced` runs catch property renaming by the Closure compiler, which dev builds and nbb don't show.
 
@@ -279,6 +281,18 @@ After tagging a release (for example `git tag v0.2.0`), run both docs tasks:
 - `bb docs:git-deps` regenerates [docs/git-deps.md](docs/git-deps.md) from [docs/git-deps.template.md](docs/git-deps.template.md) with the tag and its commit SHA.
 
 Commit both files and push.
+
+<br />
+
+## Status
+
+Alpha, subject to change. Issues welcome, see [contributing](#contributing).
+
+<br />
+
+## Contributing
+
+Issues for bugs, improvements, or features are very welcome. Please file an issue for discussion before starting or issuing a PR.
 
 <br />
 
