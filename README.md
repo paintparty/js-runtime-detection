@@ -1,9 +1,9 @@
 # js-runtime-detection
 
-**Detects JS runtime details. Built for ClojureScript dialects.**  
-<sub>Works with ClojureScript, nbb, Cherry, Clojurific, and Squint</sub>
+**Detects JS runtime details. Built for ClojureScript dialects.**\
+<sub>Works with ClojureScript, Squint, nbb, Cherry, and Clojurific</sub>
 
-<br>
+<br />
 
 ```clojure
 (ns my.app
@@ -14,29 +14,23 @@ rt/js-runtime           ;; => :node
 rt/js-runtime-is-server ;; => true
 ```
 
-<br>
+<br />
 
 ## Requirements
 
-One of these dialects:
+| Dialect                                                   | Version          |
+| :-------------------------------------------------------- | :--------------- |
+| [ClojureScript](https://github.com/clojure/clojurescript) | 1.9.854 or newer |
+| [nbb](https://github.com/babashka/nbb)                    | 1.6.214          |
+| [Cherry](https://github.com/squint-cljs/cherry)           | 0.6.38           |
+| [Clojurific](https://github.com/WhimsicalCode/clojurific) | 0.12.15          |
+| [Squint](https://github.com/squint-cljs/squint)           | 0.15.212         |
 
-| Dialect       | Tested versions                                        |
-|:--------------|:-------------------------------------------------------|
-| ClojureScript | 1.9.854 or newer                                       |
-| nbb           | 1.6.214                                                |
-| Cherry        | 0.6.38                                                 |
-| Clojurific    | 0.12.15                                                |
-| Squint        | 0.15.212                                               |
-
-ClojureScript is tested with `:advanced` builds on 1.9.854, 1.9.908, 1.9.946 and 1.10.238 through 1.12.145. Earlier versions do not work, because they have no `unchecked-get`.
-
-Any JS engine works. In engines without `globalThis` (Node before 12, IE11, Safari before 12.1), the library finds the global object through `self`, `window` or `global` instead. Cherry and Clojurific need `globalThis` for their own runtimes, so with those two dialects the engine needs it too.
-
-<br>
+<br />
 
 ## Setup
 
-#### ClojureScript and Clojurific
+### ClojureScript setup
 
 deps.edn:
 
@@ -50,9 +44,15 @@ Leiningen:
 [io.github.paintparty/js-runtime-detection "0.1.0"]
 ```
 
-Clojurific replaces ClojureScript on the classpath. This library has no dependencies, so it brings no ClojureScript in and needs no `:exclusions`.
+### Clojurific setup
 
-#### nbb
+deps.edn:
+
+```clojure
+io.github.paintparty/js-runtime-detection {:mvn/version "0.1.0"}
+```
+
+### nbb setup
 
 nbb.edn:
 
@@ -60,7 +60,7 @@ nbb.edn:
 {:deps {io.github.paintparty/js-runtime-detection {:mvn/version "0.1.0"}}}
 ```
 
-#### Squint and Cherry
+### Squint and Cherry setup
 
 Squint and Cherry read `:deps` from `squint.edn` or `cherry.edn`, and only take git and `:local/root` dependencies, not jars:
 
@@ -71,7 +71,7 @@ Squint and Cherry read `:deps` from `squint.edn` or `cherry.edn`, and only take 
 
 [Consuming js-runtime-detection as a git dependency](docs/git-deps.md) has the SHA of the latest release and the other forms the coordinate map can take. The same git coordinates work in deps.edn and nbb.edn.
 
-<br>
+<br />
 
 ## Usage
 
@@ -109,12 +109,12 @@ The library runs on JS only. From a `.cljc` file, require it inside a reader con
 (def server? #?(:clj true :cljs rt/js-runtime-is-server))
 ```
 
-<br>
+<br />
 
 ## Public defs
 
 | def                         | Value          | Answers                                            |
-|:----------------------------|:---------------|:---------------------------------------------------|
+| :-------------------------- | :------------- | :------------------------------------------------- |
 | `js-runtime`                | keyword        | Which runtime (Node, Deno, Bun, workerd, browser)  |
 | `js-platform`               | keyword or nil | Which deployment platform (Cloudflare, Vercel ...) |
 | `js-runtime-is-server`      | boolean        | Is this server-side?                               |
@@ -123,7 +123,7 @@ The library runs on JS only. From a `.cljc` file, require it inside a reader con
 | `js-runtime-has-node-apis`  | boolean        | Can I use `fs`, `process.env` and other Node APIs? |
 | `js-runtime-is-strict-node` | boolean        | Is this actual Node, not Bun or Deno in Node mode? |
 
-<br>
+<br />
 
 The value of **`js-runtime`** is one of:
 
@@ -138,7 +138,7 @@ The value of **`js-runtime`** is one of:
 `:react-native`\
 `:unknown`
 
-<br>
+<br />
 
 The value of **`js-platform`** is one of:
 
@@ -148,28 +148,28 @@ The value of **`js-platform`** is one of:
 `:fastly`\
 `nil`
 
-<br>
+<br />
 
 ## Detection matrix
 
 | Environment        | `js-runtime`         | `js-platform`   | `js-runtime-is-server` | `js-runtime-has-dom` | `js-runtime-has-jsdom` | `js-runtime-has-node-apis` | `js-runtime-is-strict-node` |
-|:-------------------|:---------------------|:----------------|:----------------------:|:--------------------:|:----------------------:|:--------------------------:|:---------------------------:|
-| Real browser       | `:browser`           | `nil`           | `false`                | `true`               | `false`                | `false`                    | `false`                     |
-| Node               | `:node`              | `nil`           | `true`                 | `false`              | `false`                | `true`                     | `true`                      |
-| jsdom in Node      | `:node`              | `nil`           | `true`                 | `true`               | `true`                 | `true`                     | `true`                      |
-| Deno 2             | `:deno`              | `nil`           | `true`                 | `false`              | `false`                | `true`                     | `false`                     |
-| jsdom in Deno      | `:deno`              | `nil`           | `true`                 | `true`               | `true`                 | `true`                     | `false`                     |
-| Bun                | `:bun`               | `nil`           | `true`                 | `false`              | `false`                | `true`                     | `false`                     |
-| jsdom in Bun       | `:bun`               | `nil`           | `true`                 | `true`               | `true`                 | `true`                     | `false`                     |
-| Cloudflare Workers | `:workerd`           | `:cloudflare`   | `true`                 | `false`              | `false`                | `false`                    | `false`                     |
-| Vercel Edge*       | `:workerd`           | `:vercel-edge`  | `true`                 | `false`              | `false`                | `false`                    | `false`                     |
-| Netlify Edge       | `:deno`              | `:netlify-edge` | `true`                 | `false`              | `false`                | `false`                    | `false`                     |
-| Fastly Compute*    | `:unknown`           | `:fastly`       | `true`                 | `false`              | `false`                | `false`                    | `false`                     |
-| Electron renderer  | `:electron-renderer` | `nil`           | `true`                 | `true`               | `false`                | `true`                     | `false`                     |
-| Electron main      | `:node`              | `nil`           | `true`                 | `false`              | `false`                | `true`                     | `true`                      |
-| React Native       | `:react-native`      | `nil`           | `false`                | `false`              | `false`                | `false`                    | `false`                     |
-| Service Worker     | `:service-worker`    | `nil`           | `false`                | `false`              | `false`                | `false`                    | `false`                     |
-| Web Worker         | `:web-worker`        | `nil`           | `false`                | `false`              | `false`                | `false`                    | `false`                     |
+| :----------------- | :------------------- | :-------------- | :--------------------: | :------------------: | :--------------------: | :------------------------: | :-------------------------: |
+| Real browser       | `:browser`           | `nil`           |         `false`        |        `true`        |         `false`        |           `false`          |           `false`           |
+| Node               | `:node`              | `nil`           |         `true`         |        `false`       |         `false`        |           `true`           |            `true`           |
+| jsdom in Node      | `:node`              | `nil`           |         `true`         |        `true`        |         `true`         |           `true`           |            `true`           |
+| Deno 2             | `:deno`              | `nil`           |         `true`         |        `false`       |         `false`        |           `true`           |           `false`           |
+| jsdom in Deno      | `:deno`              | `nil`           |         `true`         |        `true`        |         `true`         |           `true`           |           `false`           |
+| Bun                | `:bun`               | `nil`           |         `true`         |        `false`       |         `false`        |           `true`           |           `false`           |
+| jsdom in Bun       | `:bun`               | `nil`           |         `true`         |        `true`        |         `true`         |           `true`           |           `false`           |
+| Cloudflare Workers | `:workerd`           | `:cloudflare`   |         `true`         |        `false`       |         `false`        |           `false`          |           `false`           |
+| Vercel Edge\*      | `:workerd`           | `:vercel-edge`  |         `true`         |        `false`       |         `false`        |           `false`          |           `false`           |
+| Netlify Edge       | `:deno`              | `:netlify-edge` |         `true`         |        `false`       |         `false`        |           `false`          |           `false`           |
+| Fastly Compute\*   | `:unknown`           | `:fastly`       |         `true`         |        `false`       |         `false`        |           `false`          |           `false`           |
+| Electron renderer  | `:electron-renderer` | `nil`           |         `true`         |        `true`        |         `false`        |           `true`           |           `false`           |
+| Electron main      | `:node`              | `nil`           |         `true`         |        `false`       |         `false`        |           `true`           |            `true`           |
+| React Native       | `:react-native`      | `nil`           |         `false`        |        `false`       |         `false`        |           `false`          |           `false`           |
+| Service Worker     | `:service-worker`    | `nil`           |         `false`        |        `false`       |         `false`        |           `false`          |           `false`           |
+| Web Worker         | `:web-worker`        | `nil`           |         `false`        |        `false`       |         `false`        |           `false`          |           `false`           |
 
 \* Rows marked with an asterisk are unverified. Vercel's Edge Runtime is not workerd, so on Vercel Edge `js-runtime` may be `:unknown` rather than `:workerd`. The `:fastly` platform check relies on a `fastly` global, which newer versions of Fastly's JS runtime may no longer define.
 
@@ -195,19 +195,23 @@ These rows of the detection matrix are checked by the automated tests (see [How 
 
 The other rows in the detection matrix above follow from each platform's documented globals and have not been run on those platforms.
 
-<br>
+<br />
 
 ## How it works
 
-Detection works by reading properties of the global object, which is `globalThis` in modern engines. In older engines without `globalThis` (Node before 12, IE11, Safari before 12.1), the library falls back to `self`, `window` or `global`. When a global the library looks for doesn't exist, such as `Deno` in Node or `process` in a browser, the lookup returns `nil` instead of throwing an error. The library also has no dependencies and does not import Node.js built-in modules like `fs` or `os`, which don't exist in browsers or edge runtimes, so it loads in any JS environment. Every value is computed once, when `js-runtime-detection.core` loads. If your test setup installs jsdom, load `js-runtime-detection.core` after jsdom is in place.
+The library also has no dependencies and does not import Node.js built-in modules like `fs` or `os`, which don't exist in browsers or edge runtimes, so it will load in any JS environment\
+\
+Detection works by reading properties of the global object, which is `globalThis` in modern engines. In older engines without `globalThis` (Node before 12, IE11, Safari before 12.1), the library falls back to `self`, `window` or `global`. The exception to this fallback chain is Cherry and Clojurific, which both rely on `globalThis` for their own runtimes.
+
+The values of all the public defs in the library are computed once, when `js-runtime-detection.core` loads. If your test setup installs jsdom, load `js-runtime-detection.core` after jsdom is in place.
 
 Properties are read by string key, for example `globalThis["process"]["versions"]["node"]` rather than `globalThis.process.versions.node`. The Closure compiler, which ClojureScript uses for `:advanced` builds, renames dotted property names but never changes string keys, so results are the same in dev builds and `:advanced` builds.
 
-Detection only looks at which globals exist and what they contain, such as `globalThis.Deno` or `navigator.userAgent`. Other JS code running in the same environment, such as a dependency, a polyfill or a test setup, can add or change those globals. For example, a polyfill can define a `process` global in a browser, and jsdom adds `window` and `document` to Node.
+The library looks for various global vars (`Deno`, `Bun`, `process`, etc.). When they don't exist, the lookup returns `nil` instead of throwing an error. Detection only looks at which globals exist and what they contain, such as `globalThis.Deno` or `navigator.userAgent`. Other JS code running in the same environment, such as a dependency, a polyfill or a test setup, can add or change those globals. For example, a polyfill can define a `process` global in a browser, and jsdom adds `window` and `document` to Node.
 
-Use `js-runtime`, `js-platform` and the other defs to decide how your program behaves, such as how to print output or which APIs to call. Don't treat these values as a guarantee of where your code is running, as they only report what the globals look like. For example, you could have JS code running in a browser that sets `process.versions.node`, which would result in `js-runtime-is-server` and `js-runtime-has-node-apis` returning `true`. For this reason, the values of the public defs in `js-runtime-detection.core` should not be relied on for security decisions.
+`js-runtime`, `js-platform` and the other defs can be used to determine control flow in your program, such as how to print output or which APIs to call. Don't treat these values as a guarantee of where your code is running, as they only report what the globals look like. For example, you could have JS code running in a browser that sets `process.versions.node`, which would result in `js-runtime-is-server` and `js-runtime-has-node-apis` returning `true`. For this reason, the values of the public defs in `js-runtime-detection.core` should not be relied on for security decisions.
 
-<br>
+<br />
 
 ## Development
 
@@ -276,7 +280,7 @@ After tagging a release (for example `git tag v0.2.0`), run both docs tasks:
 
 Commit both files and push.
 
-<br>
+<br />
 
 ## License
 
