@@ -5,12 +5,12 @@
    environment (browser, worker, edge, Node, Deno, Bun). Every value is computed
    once, when the namespace loads.
 
-   Works with ClojureScript, nbb, Cherry, Clojurific and Squint. In Squint,
-   keywords compile to strings, so `js-runtime` is `\"node\"` rather than `:node`.
+   Works with ClojureScript, nbb, Cherry, Clojurific and Squint. `js-runtime`
+   and `js-platform` are strings, so they are the same value in every dialect.
 
    Public defs:
-     `js-runtime`                - JS runtime (`:node`, `:deno`, ...)
-     `js-platform`               - Deployment platform (`:cloudflare`, ...)
+     `js-runtime`                - JS runtime (`\"node\"`, `\"deno\"`, ...)
+     `js-platform`               - Deployment platform (`\"cloudflare\"`, ...)
      `js-runtime-is-server`      - Am I server-side?
      `js-runtime-has-dom`        - Do I have DOM APIs?
      `js-runtime-has-jsdom`      - Is jsdom active?
@@ -22,8 +22,8 @@
 ;; +---------------------------+----------------+----------------------------------------------------+
 ;; | def                       | Return type    | Purpose                                            |
 ;; +---------------------------+----------------+----------------------------------------------------+
-;; | js-runtime                | keyword        | Which runtime (Node, Deno, Bun, workerd, browser)  |
-;; | js-platform               | keyword or nil | Which deployment platform (Cloudflare, Vercel ...) |
+;; | js-runtime                | string         | Which runtime (Node, Deno, Bun, workerd, browser)  |
+;; | js-platform               | string or nil  | Which deployment platform (Cloudflare, Vercel ...) |
 ;; | js-runtime-is-server      | boolean        | Am I server-side? (convenience composite)          |
 ;; | js-runtime-has-dom        | boolean        | Do I have DOM APIs?                                |
 ;; | js-runtime-has-jsdom      | boolean        | Is jsdom active?                                   |
@@ -33,41 +33,41 @@
 
 
 ;; DETECTION MATRIX for public defs:
-;; ╔════════════════════╦════════════════════╦═══════════════╦══════════════════════╦════════════════════╦══════════════════════╦══════════════════════════╦═══════════════════════════╗
-;; ║ Environment        ║ js-runtime         ║ js-platform   ║ js-runtime-is-server ║ js-runtime-has-dom ║ js-runtime-has-jsdom ║ js-runtime-has-node-apis ║ js-runtime-is-strict-node ║
-;; ╚════════════════════╩════════════════════╩═══════════════╩══════════════════════╩════════════════════╩══════════════════════╩══════════════════════════╩═══════════════════════════╝
-;; │ Real browser       │ :browser           │ nil           │ false                │ true               │ false                │ false                    │ false                     │
-;; ├────────────────────┼────────────────────┼───────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
-;; │ Node               │ :node              │ nil           │ true                 │ false              │ false                │ true                     │ true                      │
-;; ├────────────────────┼────────────────────┼───────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
-;; │ jsdom in Node      │ :node              │ nil           │ true                 │ true               │ true                 │ true                     │ true                      │
-;; ├────────────────────┼────────────────────┼───────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
-;; │ Deno 2             │ :deno              │ nil           │ true                 │ false              │ false                │ true                     │ false                     │
-;; ├────────────────────┼────────────────────┼───────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
-;; │ jsdom in Deno      │ :deno              │ nil           │ true                 │ true               │ true                 │ true                     │ false                     │
-;; ├────────────────────┼────────────────────┼───────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
-;; │ Bun                │ :bun               │ nil           │ true                 │ false              │ false                │ true                     │ false                     │
-;; ├────────────────────┼────────────────────┼───────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
-;; │ jsdom in Bun       │ :bun               │ nil           │ true                 │ true               │ true                 │ true                     │ false                     │
-;; ├────────────────────┼────────────────────┼───────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
-;; │ Cloudflare Workers │ :workerd           │ :cloudflare   │ true                 │ false              │ false                │ false                    │ false                     │
-;; ├────────────────────┼────────────────────┼───────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
-;; │ Vercel Edge*       │ :workerd           │ :vercel-edge  │ true                 │ false              │ false                │ false                    │ false                     │
-;; ├────────────────────┼────────────────────┼───────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
-;; │ Netlify Edge       │ :deno              │ :netlify-edge │ true                 │ false              │ false                │ false                    │ false                     │
-;; ├────────────────────┼────────────────────┼───────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
-;; │ Fastly Compute*    │ :unknown           │ :fastly       │ true                 │ false              │ false                │ false                    │ false                     │
-;; ├────────────────────┼────────────────────┼───────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
-;; │ Electron renderer  │ :electron-renderer │ nil           │ true                 │ true               │ false                │ true                     │ false                     │
-;; ├────────────────────┼────────────────────┼───────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
-;; │ Electron main      │ :node              │ nil           │ true                 │ false              │ false                │ true                     │ true                      │
-;; ├────────────────────┼────────────────────┼───────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
-;; │ React Native       │ :react-native      │ nil           │ false                │ false              │ false                │ false                    │ false                     │
-;; ├────────────────────┼────────────────────┼───────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
-;; │ Service Worker     │ :service-worker    │ nil           │ false                │ false              │ false                │ false                    │ false                     │
-;; ├────────────────────┼────────────────────┼───────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
-;; │ Web Worker         │ :web-worker        │ nil           │ false                │ false              │ false                │ false                    │ false                     │
-;; └────────────────────┴────────────────────┴───────────────┴──────────────────────┴────────────────────┴──────────────────────┴──────────────────────────┴───────────────────────────┘
+;; ╔════════════════════╦═════════════════════╦════════════════╦══════════════════════╦════════════════════╦══════════════════════╦══════════════════════════╦═══════════════════════════╗
+;; ║ Environment        ║ js-runtime          ║ js-platform    ║ js-runtime-is-server ║ js-runtime-has-dom ║ js-runtime-has-jsdom ║ js-runtime-has-node-apis ║ js-runtime-is-strict-node ║
+;; ╚════════════════════╩═════════════════════╩════════════════╩══════════════════════╩════════════════════╩══════════════════════╩══════════════════════════╩═══════════════════════════╝
+;; │ Real browser       │ "browser"           │ nil            │ false                │ true               │ false                │ false                    │ false                     │
+;; ├────────────────────┼─────────────────────┼────────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
+;; │ Node               │ "node"              │ nil            │ true                 │ false              │ false                │ true                     │ true                      │
+;; ├────────────────────┼─────────────────────┼────────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
+;; │ jsdom in Node      │ "node"              │ nil            │ true                 │ true               │ true                 │ true                     │ true                      │
+;; ├────────────────────┼─────────────────────┼────────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
+;; │ Deno 2             │ "deno"              │ nil            │ true                 │ false              │ false                │ true                     │ false                     │
+;; ├────────────────────┼─────────────────────┼────────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
+;; │ jsdom in Deno      │ "deno"              │ nil            │ true                 │ true               │ true                 │ true                     │ false                     │
+;; ├────────────────────┼─────────────────────┼────────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
+;; │ Bun                │ "bun"               │ nil            │ true                 │ false              │ false                │ true                     │ false                     │
+;; ├────────────────────┼─────────────────────┼────────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
+;; │ jsdom in Bun       │ "bun"               │ nil            │ true                 │ true               │ true                 │ true                     │ false                     │
+;; ├────────────────────┼─────────────────────┼────────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
+;; │ Cloudflare Workers │ "workerd"           │ "cloudflare"   │ true                 │ false              │ false                │ false                    │ false                     │
+;; ├────────────────────┼─────────────────────┼────────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
+;; │ Vercel Edge*       │ "edge-light"        │ "vercel-edge"  │ true                 │ false              │ false                │ false                    │ false                     │
+;; ├────────────────────┼─────────────────────┼────────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
+;; │ Netlify Edge       │ "deno"              │ "netlify-edge" │ true                 │ false              │ false                │ false                    │ false                     │
+;; ├────────────────────┼─────────────────────┼────────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
+;; │ Fastly Compute*    │ "fastly"            │ "fastly"       │ true                 │ false              │ false                │ false                    │ false                     │
+;; ├────────────────────┼─────────────────────┼────────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
+;; │ Electron renderer  │ "electron-renderer" │ nil            │ true                 │ true               │ false                │ true                     │ false                     │
+;; ├────────────────────┼─────────────────────┼────────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
+;; │ Electron main      │ "node"              │ nil            │ true                 │ false              │ false                │ true                     │ true                      │
+;; ├────────────────────┼─────────────────────┼────────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
+;; │ React Native       │ "react-native"      │ nil            │ false                │ false              │ false                │ false                    │ false                     │
+;; ├────────────────────┼─────────────────────┼────────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
+;; │ Service Worker     │ "service-worker"    │ nil            │ false                │ false              │ false                │ false                    │ false                     │
+;; ├────────────────────┼─────────────────────┼────────────────┼──────────────────────┼────────────────────┼──────────────────────┼──────────────────────────┼───────────────────────────┤
+;; │ Web Worker         │ "web-worker"        │ nil            │ false                │ false              │ false                │ false                    │ false                     │
+;; └────────────────────┴─────────────────────┴────────────────┴──────────────────────┴────────────────────┴──────────────────────┴──────────────────────────┴───────────────────────────┘
 
 
 ;; NOTES on the matrix:
@@ -75,10 +75,11 @@
 ;;   Electron's defaults (contextIsolation on, nodeIntegration off) the
 ;;   renderer has no `process` global and reports the same values as a real
 ;;   browser.
-;; - * Vercel Edge and Fastly Compute rows are unverified. Vercel's Edge
-;;   Runtime is not workerd, so js-runtime may be :unknown there rather than
-;;   :workerd. The :fastly platform check relies on a `fastly` global, which
-;;   newer versions of Fastly's JS runtime may no longer define.
+;; - * Vercel Edge and Fastly Compute rows are unverified. Vercel Edge is
+;;   detected by the `EdgeRuntime` global, which Vercel documents. Fastly
+;;   Compute is detected by a `fastly` global, which newer versions of
+;;   Fastly's JS runtime may no longer define. Runtime names follow the
+;;   WinterTC runtime keys: "edge-light" is Vercel's Edge Runtime.
 ;; - Cloudflare Workers with the nodejs_compat flag (compatibility date
 ;;   2025-09-15 or later) report js-runtime-has-node-apis as true. The rest of
 ;;   the row is the same.
@@ -114,11 +115,13 @@
 ;; Cached global lookups (one-time at namespace load)
 ;; -------------------------------------------------------------------
 
-(def ^:private ua                 (gget "navigator" "userAgent"))
-(def ^:private win                (gget "window"))
-(def ^:private runtime-is-deno    (boolean (gget "Deno" "version" "deno")))
-(def ^:private runtime-is-bun     (boolean (gget "Bun")))
-(def ^:private runtime-is-workerd (= ua "Cloudflare-Workers"))
+(def ^:private ua                    (gget "navigator" "userAgent"))
+(def ^:private win                   (gget "window"))
+(def ^:private runtime-is-deno       (boolean (gget "Deno" "version" "deno")))
+(def ^:private runtime-is-bun        (boolean (gget "Bun")))
+(def ^:private runtime-is-workerd    (= ua "Cloudflare-Workers"))
+(def ^:private runtime-is-edge-light (boolean (gget "EdgeRuntime")))
+(def ^:private runtime-is-fastly     (boolean (gget "fastly")))
 
 ;; -------------------------------------------------------------------
 ;; Primitive capability flags
@@ -145,7 +148,7 @@
    access to Node APIs like `fs`, `path`, `process.env`, or native modules.
    Note: this is `true` under jsdom, so pair with `(not js-runtime-has-dom)` if
    you want to exclude test envs. For a strict Node-only check, use
-   `(= js-runtime :node)`."
+   `(= js-runtime \"node\")`."
   (boolean (gget "process" "versions" "node")))
 
 (def js-runtime-is-strict-node
@@ -162,105 +165,114 @@
 (def js-runtime
   "The JavaScript runtime, independent of deployment platform. One of:
 
-   `:node`
-   `:deno`
-   `:bun`
-   `:workerd`
-   `:browser`
-   `:service-worker`
-   `:web-worker`
-   `:electron-renderer`
-   `:react-native`
-   `:unknown`
+   `\"node\"`
+   `\"deno\"`
+   `\"bun\"`
+   `\"workerd\"`
+   `\"edge-light\"`
+   `\"fastly\"`
+   `\"browser\"`
+   `\"service-worker\"`
+   `\"web-worker\"`
+   `\"electron-renderer\"`
+   `\"react-native\"`
+   `\"unknown\"`
 
-   The `:node` branch uses `js-runtime-is-strict-node`, so Deno, Bun and
-   Cloudflare Workers in Node compatibility mode are not reported as `:node`.
-   jsdom reports the runtime it runs on, not `:browser`.
+   The `\"node\"` branch uses `js-runtime-is-strict-node`, so Deno, Bun and
+   Cloudflare Workers in Node compatibility mode are not reported as `\"node\"`.
+   jsdom reports the runtime it runs on, not `\"browser\"`.
 
-   | Environment        | Value                |
-   |:-------------------|:---------------------|
-   | Real browser       | `:browser`           |
-   | Node               | `:node`              |
-   | Deno 2             | `:deno`              |
-   | Bun                | `:bun`               |
-   | Cloudflare Workers | `:workerd`           |
-   | Vercel Edge*       | `:workerd`           |
-   | Netlify Edge       | `:deno`              |
-   | jsdom in Node      | `:node`              |
-   | Electron renderer  | `:electron-renderer` |
-   | Electron main      | `:node`              |
-   | React Native       | `:react-native`      |
-   | Service Worker     | `:service-worker`    |
-   | Web Worker         | `:web-worker`        |
+   | Environment        | Value                   |
+   |:-------------------|:------------------------|
+   | Real browser       | `\"browser\"`           |
+   | Node               | `\"node\"`              |
+   | Deno 2             | `\"deno\"`              |
+   | Bun                | `\"bun\"`               |
+   | Cloudflare Workers | `\"workerd\"`           |
+   | Vercel Edge*       | `\"edge-light\"`        |
+   | Fastly Compute*    | `\"fastly\"`            |
+   | Netlify Edge       | `\"deno\"`              |
+   | jsdom in Node      | `\"node\"`              |
+   | Electron renderer  | `\"electron-renderer\"` |
+   | Electron main      | `\"node\"`              |
+   | React Native       | `\"react-native\"`      |
+   | Service Worker     | `\"service-worker\"`    |
+   | Web Worker         | `\"web-worker\"`        |
 
-   * Unverified. On Vercel Edge this may be `:unknown`."
+   * Unverified."
   (or
    ;; Deno - must be checked b4 Node (Deno 2 shims process.versions.node)
-   (when runtime-is-deno :deno)
+   (when runtime-is-deno "deno")
 
    ;; Bun - must be checked b4 Node (Bun shims process.versions.node)
-   (when runtime-is-bun :bun)
+   (when runtime-is-bun "bun")
 
    ;; workerd (Cloudflare Workers runtime)
-   (when runtime-is-workerd :workerd)
+   (when runtime-is-workerd "workerd")
+
+   ;; Vercel Edge Runtime
+   (when runtime-is-edge-light "edge-light")
+
+   ;; Fastly Compute
+   (when runtime-is-fastly "fastly")
 
    ;; Service Worker
    (when (= (gget "self" "constructor" "name")
             "ServiceWorkerGlobalScope")
-     :service-worker)
+     "service-worker")
 
    ;; Dedicated or Shared Web Worker
    (when (and (gget "importScripts") (not win))
-     :web-worker)
+     "web-worker")
 
    ;; Electron renderer (has both window and process)
    (when (and win (gget "process" "versions" "electron"))
-     :electron-renderer)
+     "electron-renderer")
 
    ;; Browser - jsdom also defines window and document, so it is skipped
    ;; here and falls through to the runtime it runs on
    (when (and js-runtime-has-dom (not js-runtime-has-jsdom))
-     :browser)
+     "browser")
 
    ;; React Native
    (when (or (gget "HermesInternal")
              (= (gget "navigator" "product") "ReactNative"))
-     :react-native)
+     "react-native")
 
    ;; Strict Node - uses process.release.name, which Deno/Bun don't fake
-   (when js-runtime-is-strict-node :node)
+   (when js-runtime-is-strict-node "node")
 
-   :unknown))
+   "unknown"))
 
 
 (def js-platform
   "The deployment platform, independent of underlying runtime. One of:
 
-   `:netlify-edge` - Netlify Edge Functions (runs on Deno)
-   `:vercel-edge`  - Vercel Edge Functions
-   `:cloudflare`   - Cloudflare Workers (runs on workerd)
-   `:fastly`       - Fastly Compute
-   `nil`           - no specific platform detected
+   `\"netlify-edge\"` - Netlify Edge Functions (runs on Deno)
+   `\"vercel-edge\"`  - Vercel Edge Functions
+   `\"cloudflare\"`   - Cloudflare Workers (runs on workerd)
+   `\"fastly\"`       - Fastly Compute
+   `nil`              - no specific platform detected
 
    Platforms are distinct from runtimes because they layer platform-specific
    APIs (KV stores, env vars, request contexts) on top of the same runtime. A
    platform can share a runtime with other environments: Netlify Edge runs on
    Deno.
 
-   | Environment        | Value           |
-   |:-------------------|:----------------|
-   | Cloudflare Workers | `:cloudflare`   |
-   | Vercel Edge*       | `:vercel-edge`  |
-   | Netlify Edge       | `:netlify-edge` |
-   | Fastly Compute*    | `:fastly`       |
-   | Everything else    | `nil`           |
+   | Environment        | Value              |
+   |:-------------------|:-------------------|
+   | Cloudflare Workers | `\"cloudflare\"`   |
+   | Vercel Edge*       | `\"vercel-edge\"`  |
+   | Netlify Edge       | `\"netlify-edge\"` |
+   | Fastly Compute*    | `\"fastly\"`       |
+   | Everything else    | `nil`              |
 
    * Unverified."
   (cond
-    (gget "Netlify")            :netlify-edge
-    (gget "EdgeRuntime")        :vercel-edge
-    runtime-is-workerd          :cloudflare
-    (gget "fastly")             :fastly
+    (gget "Netlify")            "netlify-edge"
+    runtime-is-edge-light       "vercel-edge"
+    runtime-is-workerd          "cloudflare"
+    runtime-is-fastly           "fastly"
     :else                       nil))
 
 

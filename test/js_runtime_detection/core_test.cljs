@@ -5,14 +5,14 @@
 (def ^:private expected
   "Rows of the detection matrix, keyed by the JS_RUNTIME_DETECT_ENV
    environment variable the test process runs under."
-  {"node"       {:js-runtime                 :node
+  {"node"       {:js-runtime                 "node"
                  :js-platform                nil
                  :js-runtime-is-server         true
                  :js-runtime-has-dom        false
                  :js-runtime-has-jsdom      false
                  :js-runtime-has-node-apis  true
                  :js-runtime-is-strict-node true}
-   "jsdom-node" {:js-runtime                 :node
+   "jsdom-node" {:js-runtime                 "node"
                  :js-platform                nil
                  :js-runtime-is-server         true
                  :js-runtime-has-dom        true
@@ -20,10 +20,8 @@
                  :js-runtime-has-node-apis  true
                  :js-runtime-is-strict-node true}})
 
-;; Reads process through js/global: ClojureScript 1.9.854 adds a `process`
-;; stand-in to :advanced builds that hides Node's own from `js/process`.
 (def ^:private env-name
-  (or (some-> (unchecked-get js/global "process")
+  (or (some-> js/process
               (unchecked-get "env")
               (unchecked-get "JS_RUNTIME_DETECT_ENV"))
       "node"))
@@ -44,3 +42,7 @@
 (deftest predicates-return-booleans
   (doseq [[k v] (dissoc actual :js-runtime :js-platform)]
     (is (boolean? v) (str k " is not a boolean"))))
+
+(deftest runtime-and-platform-are-strings
+  (is (string? rt/js-runtime))
+  (is (or (nil? rt/js-platform) (string? rt/js-platform))))

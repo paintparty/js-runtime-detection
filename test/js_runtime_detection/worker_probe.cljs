@@ -6,8 +6,8 @@
 
 (unchecked-set js/globalThis "__jsRuntimeDetect"
                (js/JSON.stringify
-                #js {"js-runtime"                 (some-> rt/js-runtime name)
-                     "js-platform"                (some-> rt/js-platform name)
+                #js {"js-runtime"                 rt/js-runtime
+                     "js-platform"                rt/js-platform
                      "js-runtime-is-server"         rt/js-runtime-is-server
                      "js-runtime-has-dom"        rt/js-runtime-has-dom
                      "js-runtime-has-jsdom"      rt/js-runtime-has-jsdom

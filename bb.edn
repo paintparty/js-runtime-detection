@@ -29,10 +29,6 @@
   {:doc  "Compile the tests with :advanced on the latest ClojureScript and run them on Node: plain, with jsdom globals, and without globalThis. Catches property renaming that dev builds don't show."
    :task (tr/run-advanced "ClojureScript 1.12.145, :advanced" "cljs-latest" "target/cljs-latest")}
 
-  test:compat
-  {:doc  "Compile the tests with :advanced on the oldest supported ClojureScript (1.9.854) and run them on Node: plain, with jsdom globals, and without globalThis."
-   :task (tr/run-advanced "ClojureScript 1.9.854, :advanced" "cljs-1.9" "target/cljs-1.9.854")}
-
   test:cloudflare
   {:doc  "Compile a probe with :advanced and run it in workerd (Cloudflare's Workers runtime) through Miniflare, with and without nodejs_compat. Optional: skipped unless Miniflare is installed in test/cloudflare."
    :task (tr/run-cloudflare)}

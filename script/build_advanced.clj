@@ -1,6 +1,4 @@
 ;; Compiles ClojureScript with :advanced optimizations.
-;; Uses cljs.build.api rather than cljs.main so it also runs on
-;; ClojureScript 1.9.946, which predates cljs.main.
 ;;
 ;; Usage: clojure -M:<cljs alias> script/build_advanced.clj <output-dir> [main-ns] [target]
 ;;

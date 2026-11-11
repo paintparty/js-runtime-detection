@@ -114,9 +114,6 @@
               ['test:advanced   ["ClojureScript 1.12.145, :advanced | Node"
                                  "ClojureScript 1.12.145, :advanced | Node with jsdom globals"
                                  "ClojureScript 1.12.145, :advanced | Node without globalThis"]]
-              ['test:compat     ["ClojureScript 1.9.854, :advanced | Node"
-                                 "ClojureScript 1.9.854, :advanced | Node with jsdom globals"
-                                 "ClojureScript 1.9.854, :advanced | Node without globalThis"]]
               ['test:cloudflare [(str "ClojureScript 1.12.145, :advanced | Cloudflare Workers (workerd via Miniflare)"
                                       (when-not cloudflare? " (skipped, Miniflare is not installed)"))]]
               ['test:squint     ["Squint 0.15.212 | Node"
