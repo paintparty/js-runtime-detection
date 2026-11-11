@@ -16,6 +16,16 @@ rt/js-runtime-is-server ;; => true
 
 <br />
 
+## Development Status
+
+| Period | Stage | Release |
+|---|---|---|
+| 2026 Mar-Nov | Experimental | - |
+| 2026 Nov-present  | Alpha | 0.1.0 |
+
+
+<br />
+
 ## Requirements
 
 | Dialect                                                   | Version          |
