@@ -57,7 +57,7 @@
     (println "No tags yet, so README.md is unchanged. Rerun after tagging a release.")))
 
 (defn write-git-deps
-  "Regenerates the git deps doc at out-path (docs/git-deps.md, for example)
+  "Regenerates the git deps doc at out-path (doc/git-deps.md, for example)
    from bb/tasks/git-deps.template.md and the latest tag. Uses HEAD if there
    are no tags yet."
   [out-path]

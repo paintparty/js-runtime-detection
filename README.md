@@ -81,7 +81,7 @@ Squint and Cherry read `:deps` from `squint.edn` or `cherry.edn`, and only take 
  :deps  {io.github.paintparty/js-runtime-detection {:git/tag "v0.1.0" :git/sha "..."}}}
 ```
 
-[Consuming js-runtime-detection as a git dependency](docs/git-deps.md) has the SHA of the latest release and the other forms the coordinate map can take. The same git coordinates work in deps.edn and nbb.edn.
+[Consuming js-runtime-detection as a git dependency](doc/git-deps.md) has the SHA of the latest release and the other forms the coordinate map can take. The same git coordinates work in deps.edn and nbb.edn.
 
 <br />
 
@@ -225,7 +225,7 @@ The library looks for various global vars (`Deno`, `Bun`, `process`, etc.). When
 
 <br />
 
-## Development
+## Developing
 
 Available dev tasks via `bb.edn`:
 
@@ -241,7 +241,7 @@ bb test:all        # all of the above (test:cloudflare skips if Miniflare is not
 bb ci              # run the tests and build the jar
 bb install         # install the jar to ~/.m2
 bb docs:readme     # after tagging a release: update the version numbers in this README
-bb docs:git-deps   # after tagging a release: regenerate docs/git-deps.md
+bb docs:git-deps   # after tagging a release: regenerate doc/git-deps.md
 ```
 
 ### How the tests work
@@ -285,15 +285,9 @@ The task builds [worker_probe.cljs](test/js_runtime_detection/worker_probe.cljs)
 After tagging a release (for example `git tag v0.2.0`), run both docs tasks:
 
 - `bb docs:readme` updates the version numbers in the Setup section of this README to match the tag.
-- `bb docs:git-deps` regenerates [docs/git-deps.md](docs/git-deps.md) from [bb/tasks/git-deps.template.md](bb/tasks/git-deps.template.md) with the tag and its commit SHA.
+- `bb docs:git-deps` regenerates [doc/git-deps.md](doc/git-deps.md) from [bb/tasks/git-deps.template.md](bb/tasks/git-deps.template.md) with the tag and its commit SHA.
 
 Commit both files and push.
-
-<br />
-
-## Status
-
-Alpha, subject to change. Issues welcome, see [contributing](#contributing).
 
 <br />
 
