@@ -285,7 +285,7 @@ The task builds [worker_probe.cljs](test/js_runtime_detection/worker_probe.cljs)
 After tagging a release (for example `git tag v0.2.0`), run both docs tasks:
 
 - `bb docs:readme` updates the version numbers in the Setup section of this README to match the tag.
-- `bb docs:git-deps` regenerates [docs/git-deps.md](docs/git-deps.md) from [docs/git-deps.template.md](docs/git-deps.template.md) with the tag and its commit SHA.
+- `bb docs:git-deps` regenerates [docs/git-deps.md](docs/git-deps.md) from [bb/tasks/git-deps.template.md](bb/tasks/git-deps.template.md) with the tag and its commit SHA.
 
 Commit both files and push.
 
