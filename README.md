@@ -209,9 +209,9 @@ The other rows in the detection matrix above follow from each platform's documen
 
 <br />
 
-## How it works
+## How it detection works
 
-The library also has zero dependencies. It does not import any Node.js built-in modules like `fs` or `os`, which don't exist in browsers or edge runtimes. The library should load in any JS environment.\
+The library has zero dependencies. It does not import any Node.js built-in modules like `fs` or `os` (they don't exist in browsers or edge runtimes). The library should load in any JS environment.\
 \
 Detection works by reading properties of the global object, which is `globalThis` in modern engines. In older engines without `globalThis` (Node before 12, IE11, Safari before 12.1), the library falls back to `self`, `window` or `global`. The exception to this fallback chain is Cherry and Clojurific, which both rely on `globalThis` for their own runtimes.
 
