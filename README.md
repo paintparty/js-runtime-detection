@@ -36,7 +36,7 @@ rt/js-runtime-is-server ;; => true
 | [Clojurific](https://github.com/WhimsicalCode/clojurific) | 0.12.15          |
 | [Squint](https://github.com/squint-cljs/squint)           | 0.15.212         |
 
-The library reads JS properties with `unchecked-get`, which ClojureScript added in 1.9.854, so all versions after that should work. The tests run on ClojureScript 1.12.145.
+The library reads JS properties with `unchecked-get` (added in cljs v1.9.854), so all cljs versions after that should work. The tests run on ClojureScript 1.12.145.
 
 <br />
 
@@ -209,9 +209,9 @@ The other rows in the detection matrix above follow from each platform's documen
 
 <br />
 
-## How it detection works
+## How detection works
 
-The library has zero dependencies. It does not import any Node.js built-in modules like `fs` or `os` (they don't exist in browsers or edge runtimes). The library should load in any JS environment.\
+The **js-runtime-detection** lib has zero dependencies, and does not import any Node.js built-in modules like `fs` or `os` (they don't exist in browsers or edge runtimes). The library should load in any JS environment.\
 \
 Detection works by reading properties of the global object, which is `globalThis` in modern engines. In older engines without `globalThis` (Node before 12, IE11, Safari before 12.1), the library falls back to `self`, `window` or `global`. The exception to this fallback chain is Cherry and Clojurific, which both rely on `globalThis` for their own runtimes.
 
@@ -230,25 +230,27 @@ The library looks for various global vars (`Deno`, `Bun`, `process`, etc.). When
 Available dev tasks via `bb.edn`:
 
 ```sh
-bb test            # same as test:nbb
-bb test:nbb        # run the tests on Node under nbb, plain and with jsdom globals
-bb test:advanced   # compile the tests with :advanced on the latest ClojureScript, run on Node plain and with jsdom globals
-bb test:cloudflare # optional: run a probe in workerd (Cloudflare Workers) via Miniflare, with and without nodejs_compat
-bb test:squint     # compile the tests with Squint, run on Node
-bb test:cherry     # compile the tests with Cherry, run on Node
-bb test:clojurific # compile the tests with Clojurific, run on Node (needs Java 17 or newer)
-bb test:all        # all of the above (test:cloudflare skips if Miniflare is not installed)
-bb ci              # run the tests and build the jar
-bb install         # install the jar to ~/.m2
-bb docs:readme     # after tagging a release: update the version numbers in this README
-bb docs:git-deps   # after tagging a release: regenerate doc/git-deps.md
+bb test              # same as test:nbb
+bb test:nbb          # run the tests on Node under nbb, plain and with jsdom globals
+bb test:advanced     # compile the tests with :advanced on the latest ClojureScript,
+                     # run on vanilla Node and with jsdom globals
+bb test:cloudflare   # optional: run a probe in workerd (Cloudflare Workers) via Miniflare,
+                     # with and without nodejs_compat
+bb test:squint       # compile the tests with Squint, run on Node
+bb test:cherry       # compile the tests with Cherry, run on Node
+bb test:clojurific   # compile the tests with Clojurific, run on Node (needs Java 17 or newer)
+bb test:all          # all of the above (test:cloudflare skips if Miniflare is not installed)
+bb ci                # run the tests and build the jar
+bb install           # install the jar to ~/.m2
+bb docs:readme       # after tagging a release: update the version numbers in this README
+bb docs:git-deps     # after tagging a release: regenerate doc/git-deps.md
 ```
 
 ### How the tests work
 
 - Each test run checks one row of the detection matrix. The `JS_RUNTIME_DETECT_ENV` env var determines the row: `node` (the default) or `jsdom-node`.
 
-- `test:advanced` compiles the tests with `:advanced` optimizations, then run them three times on Node. The first run is no-frills. The second preloads [test/stubs/jsdom.cjs](test/stubs/jsdom.cjs), which sets the `window`, `document` and jsdom user agent globals that global-jsdom and jest-environment-jsdom install. The third preloads [test/stubs/no-globalthis.cjs](test/stubs/no-globalthis.cjs), which deletes `globalThis` to imitate older engines. That third run leaves out the `NODE_USE_ENV_PROXY` env var, because with it set, Node's own HTTP proxy setup reads `globalThis` after the preload and crashes before the tests start.
+- `test:advanced` compiles the tests with `:advanced` optimizations, then run them three times on Node. The first run is out-of-the-box, no preloads. The second preloads [test/stubs/jsdom.cjs](test/stubs/jsdom.cjs), which sets the `window`, `document` and jsdom user agent globals that global-jsdom and jest-environment-jsdom install. The third preloads [test/stubs/no-globalthis.cjs](test/stubs/no-globalthis.cjs), which deletes `globalThis` to imitate older engines. That third run leaves out the `NODE_USE_ENV_PROXY` env var, because with it set, Node's own HTTP proxy setup reads `globalThis` after the preload and crashes before the tests start.
 
 - Each run prints a label first, naming the dialect and the row, for example `=== Squint 0.15.212 | Node with jsdom globals`.
 
